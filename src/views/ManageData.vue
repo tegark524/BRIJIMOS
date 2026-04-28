@@ -43,7 +43,7 @@ const showToast = (message, type = 'success') => {
 };
 
 // GANTI DENGAN URL APPS SCRIPT PALING BARU KAMU!
-const apiUrl = 'https://script.google.com/macros/s/AKfycbz9dCJE_F9tn6GAkbEeXp4x--DK0alT8V0SKBRxPLjRPshCmZ7x5cdsExtKH1YtUhy5Bw/exec'; 
+const apiUrl = import.meta.env.VITE_API_URL; 
 
 const fetchData = async () => {
   isLoading.value = true;

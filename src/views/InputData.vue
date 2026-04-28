@@ -23,7 +23,7 @@ const parsedData = ref([]);
 const tanggalInput = ref(new Date().toISOString().split('T')[0]);
 const isSaving = ref(false);
 
-const apiUrl = 'https://script.google.com/macros/s/AKfycbz9dCJE_F9tn6GAkbEeXp4x--DK0alT8V0SKBRxPLjRPshCmZ7x5cdsExtKH1YtUhy5Bw/exec'; 
+const apiUrl = import.meta.env.VITE_API_URL; 
 
 // --- FIX: URUTAN PRODUK ---
 const fixedProducts = [
