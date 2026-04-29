@@ -18,7 +18,7 @@ watch(activeTab, (newVal) => {
 });
 
 const menuTabs = [
-  { id: 'pegawai', l: 'Pegawai', icon: Users },
+  { id: 'pegawai', l: 'Dana RMFT', icon: Users },
   { id: 'unit', l: 'Unit Kerja', icon: Building2 },
   { id: 'keragaan', l: 'Keragaan', icon: Activity },
   { id: 'pipeline', l: 'Pipeline', icon: TrendingUp },
@@ -589,7 +589,7 @@ onMounted(fetchData);
             <table class="w-full text-left text-sm whitespace-nowrap min-w-[1000px]">
               <thead class="bg-slate-100 text-slate-600 uppercase text-xs font-semibold tracking-wider">
                 <tr>
-                  <th rowspan="2" class="p-4 border-b border-slate-200 w-64">Nama Pegawai / PN</th>
+                  <th rowspan="2" class="p-4 border-b border-slate-200 w-64">Dana RMFT / PN</th>
                   <th colspan="3" class="p-4 border-b border-slate-200 text-center">Baseline <span class="block text-[10px] font-normal text-slate-400 mt-1 lowercase capitalize">({{selectedBaseline}})</span></th>
                   <th colspan="3" class="p-4 border-b border-slate-200 text-center">Posisi Latest <span class="block text-[10px] font-normal text-slate-400 mt-1 lowercase capitalize">({{selectedLatest}})</span></th>
                   <th colspan="3" class="p-4 border-b border-slate-200 text-center bg-indigo-50/50 text-indigo-800">Delta Analysis</th>

@@ -27,7 +27,7 @@ const isLoading = ref(false);
 const isProcessing = ref(false);
 
 const categories = [
-  {id:'pegawai', n:'Pegawai', i: Users},
+  {id:'pegawai', n:'Dana RMFT', i: Users},
   {id:'unit', n:'Unit Kerja', i: Building2},
   {id:'keragaan', n:'Keragaan', i: Activity},
   {id:'rka', n:'RKA', i: FileText},

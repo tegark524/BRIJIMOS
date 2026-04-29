@@ -40,7 +40,7 @@ const formatDateIndo = (dateStr) => {
 };
 
 const menuTabs = [
-  { id: 'pegawai', l: 'Pegawai', icon: Users },
+  { id: 'pegawai', l: 'Dana RMFT', icon: Users },
   { id: 'uker', l: 'Unit Kerja', icon: Building2 },
   { id: 'keragaan', l: 'Keragaan', icon: BarChart3 },
   { id: 'rka', l: 'RKA', icon: FileText },
@@ -274,7 +274,7 @@ const saveData = async () => {
               </div>
             </div>
             <div class="px-5 py-2 bg-blue-100 text-blue-700 rounded-2xl font-black text-[10px] uppercase border border-blue-200">
-               {{ inputType }} MODE
+               {{ inputType === 'pegawai' ? 'DANA' : inputType }} MODE
             </div>
           </div>
 

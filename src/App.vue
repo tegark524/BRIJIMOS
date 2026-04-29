@@ -49,7 +49,7 @@
           <div v-show="openMenus.dashboard" class="mt-1 mb-2 ml-4 pl-4 border-l border-slate-200 space-y-1">
             <router-link to="/?tab=pegawai" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
               <Users class="w-4 h-4" />
-              <span>Pegawai</span>
+              <span>Dana RMFT</span>
             </router-link>
             <router-link to="/?tab=unit" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
               <Building2 class="w-4 h-4" />
@@ -84,7 +84,7 @@
           <div v-show="openMenus.input" class="mt-1 mb-2 ml-4 pl-4 border-l border-slate-200 space-y-1">
             <router-link to="/input?type=pegawai" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
               <Users class="w-4 h-4" />
-              <span>Pegawai</span>
+              <span>Dana RMFT</span>
             </router-link>
             <router-link to="/input?type=uker" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
               <Building2 class="w-4 h-4" />
@@ -123,7 +123,7 @@
           <div v-show="openMenus.management" class="mt-1 mb-2 ml-4 pl-4 border-l border-slate-200 space-y-1">
             <router-link to="/manage?type=pegawai" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
               <Users class="w-4 h-4" />
-              <span>Pegawai</span>
+              <span>Dana RMFT</span>
             </router-link>
             <router-link to="/manage?type=unit" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
               <Building2 class="w-4 h-4" />
