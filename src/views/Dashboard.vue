@@ -27,6 +27,7 @@ const menuTabs = [
 
 const selectedProduct = ref('Giro'); 
 const selectedDateUnit = ref(''); 
+const selectedBaselineUnit = ref(''); 
 const rawData = ref({ pegawai: [], unit: [], keragaan: [], rka: [], pipeline: [], rmft_ach: [] });
 const searchQuery = ref('');
 const selectedBaseline = ref('');
@@ -94,6 +95,9 @@ const fetchData = async () => {
     // Set Default Dates
     const kDates = [...new Set(data.keragaan.map(item => formatToLocalWIB(item.Tanggal_Data)))].sort();
     if (kDates.length > 0) selectedDateUnit.value = kDates[kDates.length - 1];
+
+    const uDates = [...new Set((data.unit || []).map(item => formatToLocalWIB(item.Tanggal_Data)))].sort();
+    if (uDates.length > 0) selectedBaselineUnit.value = uDates[0];
 
     const pDates = [...new Set(data.pegawai.map(item => formatToLocalWIB(item.Tanggal_Data)))].sort();
     if (pDates.length > 0) {
@@ -269,10 +273,18 @@ const pegawaiChartOptions = computed(() => ({
         'Tabungan': item.l_t - item.c_t,
         'Deposito': item.l_d - item.c_d,
       };
-      return map[selectedPegawaiProduct.value] >= 0 ? '#10b981' : '#2563eb'; // Hijau jika naik, Biru tua jika turun
+      return map[selectedPegawaiProduct.value] >= 0 ? '#10b981' : '#ef4444'; // Hijau jika naik/sama, Merah jika turun
     }
   ],
-  legend: { position: 'top', horizontalAlign: 'right', fontSize: '12px', markers: { radius: 12 } },
+  legend: { 
+    position: 'top', 
+    horizontalAlign: 'right', 
+    fontSize: '12px', 
+    customLegendItems: ['Baseline', 'Latest (Naik/Sama)', 'Latest (Turun)'],
+    markers: { radius: 12, fillColors: ['#64748b', '#10b981', '#ef4444'] },
+    onItemClick: { toggleDataSeries: false },
+    onItemHover: { highlightDataSeries: false }
+  },
   tooltip: { y: { formatter: (v) => formatNum(v) } }
 }));
 
@@ -327,8 +339,17 @@ const keragaanChartOptions = computed(() => ({
       }
     }]
   },
-  colors: [({ value }) => value >= 100 ? '#10b981' : '#2563eb'], // Hijau jika >= 100%, Biru tua jika di bawah
-  legend: { show: false },
+  colors: [({ value }) => value >= 100 ? '#10b981' : '#ef4444'], // Hijau jika >= 100%, Merah jika di bawah
+  legend: { 
+    show: true,
+    position: 'top', 
+    horizontalAlign: 'right', 
+    fontSize: '12px',
+    customLegendItems: ['Target Terpenuhi (≥100%)', 'Belum Memenuhi (<100%)'],
+    markers: { radius: 12, fillColors: ['#10b981', '#ef4444'] },
+    onItemClick: { toggleDataSeries: false },
+    onItemHover: { highlightDataSeries: false }
+  },
   tooltip: { 
     y: { formatter: (v) => v.toFixed(2) + '%' }
   }
@@ -369,17 +390,25 @@ const unitChartOptions = computed(() => ({
     ({ dataPointIndex }) => {
       const item = unitChartData.value[dataPointIndex];
       if (!item) return '#64748b';
-      return item.latest >= item.baseline ? '#10b981' : '#2563eb'; // Hijau jika naik, Biru tua jika turun
+      return item.latest >= item.baseline ? '#10b981' : '#ef4444'; // Hijau jika naik, Merah jika turun
     }
   ],
-  legend: { position: 'top', horizontalAlign: 'right', fontSize: '12px', markers: { radius: 12 } },
+  legend: { 
+    position: 'top', 
+    horizontalAlign: 'right', 
+    fontSize: '12px', 
+    customLegendItems: ['Baseline', 'Latest (Naik/Sama)', 'Latest (Turun)'],
+    markers: { radius: 12, fillColors: ['#64748b', '#10b981', '#ef4444'] },
+    onItemClick: { toggleDataSeries: false },
+    onItemHover: { highlightDataSeries: false }
+  },
   tooltip: { y: { formatter: (v) => formatNum(v) } }
 }));
 
 const unitChartData = computed(() => {
   const data = rawData.value.unit.filter(i => i.Produk === selectedUnitProduct.value);
   const units = [...new Set(data.map(i => i.Unit_KC))];
-  const baselineDate = unitDates.value[0];
+  const baselineDate = selectedBaselineUnit.value || unitDates.value[0];
   const latestDate = selectedDateUnit.value;
 
   return units.map(u => {
@@ -437,7 +466,17 @@ const rmftChartOptions = computed(() => ({
       label: { text: 'TARGET (100%)', style: { color: '#64748b', background: '#f8fafc', fontSize: '10px', fontWeight: 500 } }
     }]
   },
-  colors: [({ value }) => value >= 100 ? '#10b981' : '#2563eb'], // Hijau jika >= 100%, Biru tua jika di bawah
+  colors: [({ value }) => value >= 100 ? '#10b981' : '#ef4444'], // Hijau jika >= 100%, Merah jika di bawah
+  legend: { 
+    show: true,
+    position: 'top', 
+    horizontalAlign: 'right', 
+    fontSize: '12px',
+    customLegendItems: ['Target Terpenuhi (≥100%)', 'Belum Memenuhi (<100%)'],
+    markers: { radius: 12, fillColors: ['#10b981', '#ef4444'] },
+    onItemClick: { toggleDataSeries: false },
+    onItemHover: { highlightDataSeries: false }
+  },
   tooltip: { y: { formatter: (v) => v.toFixed(2) + '%' } }
 }));
 
@@ -591,11 +630,19 @@ onMounted(fetchData);
               {{p}}
             </button>
           </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 mt-4">Tinjau Tanggal</label>
-            <select v-model="selectedDateUnit" class="w-full border border-slate-200 p-2.5 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all">
-              <option v-for="d in [...new Set(rawData.unit.map(i => formatToLocalWIB(i.Tanggal_Data)))].sort().reverse()" :key="d" :value="d">{{d}}</option>
-            </select>
+          <div class="space-y-4 mt-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Pilih Baseline</label>
+              <select v-model="selectedBaselineUnit" class="w-full border border-slate-200 p-2.5 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all cursor-pointer">
+                <option v-for="d in [...new Set(rawData.unit.map(i => formatToLocalWIB(i.Tanggal_Data)))].sort()" :key="d" :value="d">{{d}}</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Pilih Latest</label>
+              <select v-model="selectedDateUnit" class="w-full border border-slate-200 p-2.5 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all cursor-pointer">
+                <option v-for="d in [...new Set(rawData.unit.map(i => formatToLocalWIB(i.Tanggal_Data)))].sort().reverse()" :key="d" :value="d">{{d}}</option>
+              </select>
+            </div>
           </div>
         </div>
         <div class="lg:col-span-3 bg-white p-6 rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -608,7 +655,7 @@ onMounted(fetchData);
       <apexchart
         type="bar"
         :height="Math.max(300, unitChartData.length * 45)"
-        :key="selectedDateUnit + selectedUnitProduct"
+        :key="selectedBaselineUnit + selectedDateUnit + selectedUnitProduct"
         :options="unitChartOptions"
         :series="unitChartSeries"
       ></apexchart>
