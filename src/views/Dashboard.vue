@@ -260,14 +260,18 @@ const rmftPipelineSummary = computed(() => {
   const summary = {};
   data.forEach(i => {
     const rmft = String(i.NAMA_RMFT || i.RMFT || 'Unknown RMFT');
-    const val = Number(i.PIPELINE || i.Pipeline || 0);
-    if (!summary[rmft]) summary[rmft] = 0;
-    summary[rmft] += val;
+    const valPipeline = Number(i.PIPELINE || i.Pipeline || i.pipeline || 0);
+    const valRealisasi = Number(i.REALISASI || i.Nominal || i.NOMINAL || i.nominal || 0);
+    
+    if (!summary[rmft]) summary[rmft] = { pipeline: 0, realisasi: 0 };
+    summary[rmft].pipeline += valPipeline;
+    summary[rmft].realisasi += valRealisasi;
   });
   
   return Object.keys(summary).map(rmft => ({
     rmft,
-    totalPipeline: summary[rmft]
+    totalPipeline: summary[rmft].pipeline,
+    totalRealisasi: summary[rmft].realisasi
   })).sort((a, b) => b.totalPipeline - a.totalPipeline).slice(0, 10);
 });
 
@@ -478,20 +482,37 @@ const unitChartSeries = computed(() => [
 
 const pipelineChartOptions = computed(() => ({
   chart: { type: 'bar', toolbar: { show: false }, fontFamily: 'Inter, sans-serif' },
-  plotOptions: { bar: { horizontal: true, barHeight: '50%', borderRadius: 4 } },
-  dataLabels: { enabled: true, formatter: (v) => formatJuta(v) + ' Jt', style: { fontSize: '11px', colors: ['#ffffff'] } },
+  plotOptions: { bar: { horizontal: true, barHeight: '60%', borderRadius: 4 } },
+  dataLabels: { enabled: true, formatter: (v) => formatJuta(v) + ' Jt', style: { fontSize: '10px', colors: ['#ffffff'] } },
   grid: { borderColor: '#f1f5f9', strokeDashArray: 4, xaxis: { lines: { show: true } }, yaxis: { lines: { show: false } } },
   xaxis: {
     categories: rmftPipelineSummary.value.map(i => i.rmft),
     labels: { formatter: (v) => formatJuta(v), style: { fontSize: '11px', colors: '#64748b' } }
   },
   yaxis: { labels: { style: { fontSize: '11px', colors: '#64748b' } } },
-  colors: ['#2563eb'], // Biru tua untuk default
+  colors: [
+    '#64748b', // Abu-abu tua untuk Target Pipeline
+    ({ dataPointIndex }) => {
+      const item = rmftPipelineSummary.value[dataPointIndex];
+      if (!item) return '#64748b';
+      return item.totalRealisasi >= item.totalPipeline ? '#10b981' : '#ef4444'; // Hijau jika tembus, Merah jika belum
+    }
+  ],
+  legend: { 
+    position: 'top', 
+    horizontalAlign: 'right', 
+    fontSize: '12px', 
+    customLegendItems: ['Target Pipeline', 'Realisasi (Tembus)', 'Realisasi (Belum)'],
+    markers: { radius: 12, fillColors: ['#64748b', '#10b981', '#ef4444'] },
+    onItemClick: { toggleDataSeries: false },
+    onItemHover: { highlightDataSeries: false }
+  },
   tooltip: { y: { formatter: (v) => formatJuta(v) + ' Jt' } }
 }));
 
 const pipelineChartSeries = computed(() => [
-  { name: 'Total Pipeline', data: rmftPipelineSummary.value.map(i => i.totalPipeline) }
+  { name: 'Target Pipeline', data: rmftPipelineSummary.value.map(i => i.totalPipeline) },
+  { name: 'Realisasi', data: rmftPipelineSummary.value.map(i => i.totalRealisasi) }
 ]);
 
 // --- RMFT ACHIEVEMENT CHART OPTIONS ---
@@ -809,7 +830,7 @@ onMounted(fetchData);
           <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Top 10 RMFT by Pipeline</h3>
           <div class="w-full overflow-x-auto custom-scrollbar pb-2">
             <div class="min-w-[600px] lg:min-w-full">
-              <apexchart type="bar" height="300" :options="pipelineChartOptions" :series="pipelineChartSeries"></apexchart>
+              <apexchart type="bar" :height="Math.max(350, rmftPipelineSummary.length * 45)" :options="pipelineChartOptions" :series="pipelineChartSeries"></apexchart>
             </div>
           </div>
         </div>
