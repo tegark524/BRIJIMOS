@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Users, Building2, Activity, TrendingUp, Target, Search } from 'lucide-vue-next';
+import { Users, Building2, Activity, TrendingUp, Target, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-vue-next';
 
 // --- STATE / VARIABEL UTAMA ---
 const route = useRoute();
@@ -195,16 +195,64 @@ const keragaanAnalysis = computed(() => {
 });
 
 // --- PIPELINE ANALYSIS ---
-const pipelineAnalysis = computed(() => {
+const pipelineSelectedMonth = ref('');
+const pipelineSortOrder = ref('default');
+
+const togglePipelineSort = () => {
+  if (pipelineSortOrder.value === 'default') pipelineSortOrder.value = 'asc';
+  else if (pipelineSortOrder.value === 'asc') pipelineSortOrder.value = 'desc';
+  else pipelineSortOrder.value = 'default';
+};
+
+const pipelineMonths = computed(() => {
   const data = rawData.value.pipeline || [];
   if (!data.length) return [];
+  const months = data.map(i => {
+    const d = i.TANGGAL_TARGET || i.Tanggal || i.TANGGAL || '';
+    if (!d) return null;
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return null;
+    return formatToLocalWIB(d).substring(0, 7);
+  }).filter(Boolean);
+  return [...new Set(months)].sort().reverse();
+});
+
+const pipelineAnalysis = computed(() => {
+  let data = rawData.value.pipeline || [];
+  if (!data.length) return [];
   const q = String(searchQuery.value).toLowerCase();
-  return data.filter(i => {
+  const month = pipelineSelectedMonth.value;
+
+  let filtered = data.filter(i => {
     const rmft = String(i.NAMA_RMFT || i.RMFT || '').toLowerCase();
     const nasabah = String(i.NAMA_NASABAH || i.Nasabah || i.NASABAH || '').toLowerCase();
     const ket = String(i.KETERANGAN || i.Ket || '').toLowerCase();
-    return rmft.includes(q) || nasabah.includes(q) || ket.includes(q);
+    const matchQ = rmft.includes(q) || nasabah.includes(q) || ket.includes(q);
+
+    let matchMonth = true;
+    if (month) {
+      const d = i.TANGGAL_TARGET || i.Tanggal || i.TANGGAL || '';
+      const localD = formatToLocalWIB(d).substring(0, 7);
+      matchMonth = (localD === month);
+    }
+    return matchQ && matchMonth;
   });
+
+  if (pipelineSortOrder.value === 'asc' || pipelineSortOrder.value === 'desc') {
+    filtered.sort((a, b) => {
+      const da = new Date(a.TANGGAL_TARGET || a.Tanggal || a.TANGGAL || 0).getTime();
+      const db = new Date(b.TANGGAL_TARGET || b.Tanggal || b.TANGGAL || 0).getTime();
+      return pipelineSortOrder.value === 'asc' ? da - db : db - da;
+    });
+  } else {
+    filtered.sort((a, b) => {
+      const rmftA = String(a.NAMA_RMFT || a.RMFT || '');
+      const rmftB = String(b.NAMA_RMFT || b.RMFT || '');
+      return rmftA.localeCompare(rmftB);
+    });
+  }
+
+  return filtered;
 });
 
 const rmftPipelineSummary = computed(() => {
@@ -758,7 +806,7 @@ onMounted(fetchData);
     <div v-else-if="activeTab === 'pipeline'" class="animate-in fade-in duration-500 space-y-6">
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-          <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Top 10 RMFT - Total Pipeline (Juta)</h3>
+          <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Top 10 RMFT by Pipeline</h3>
           <div class="w-full overflow-x-auto custom-scrollbar pb-2">
             <div class="min-w-[600px] lg:min-w-full">
               <apexchart type="bar" height="300" :options="pipelineChartOptions" :series="pipelineChartSeries"></apexchart>
@@ -771,6 +819,15 @@ onMounted(fetchData);
             <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input v-model="searchQuery" placeholder="Cari RMFT, Nasabah, Keterangan..." class="w-full border border-slate-200 pl-10 p-2.5 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all" />
           </div>
+          
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider text-center mt-2">Filter Bulan Target</label>
+          <div class="relative">
+            <Calendar class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <select v-model="pipelineSelectedMonth" class="w-full border border-slate-200 pl-10 p-2.5 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all cursor-pointer">
+              <option value="">Semua Bulan</option>
+              <option v-for="m in pipelineMonths" :key="m" :value="m">{{ m }}</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -780,26 +837,32 @@ onMounted(fetchData);
             <table class="w-full text-left text-sm whitespace-nowrap min-w-[900px]">
               <thead class="bg-slate-100 text-slate-600 uppercase text-xs font-semibold tracking-wider">
                 <tr>
-                  <th class="p-4 border-b border-slate-200 w-64">RMFT & Nasabah</th>
-                  <th class="p-4 border-b border-slate-200 text-right">Pipeline (Jt)</th>
-                  <th class="p-4 border-b border-slate-200 text-right">Realisasi (Jt)</th>
-                  <th class="p-4 border-b border-slate-200 text-center">Tanggal Target</th>
-                  <th class="p-4 border-b border-slate-200">Keterangan</th>
+                  <th class="p-4 border-b border-slate-200 w-48"><Users class="w-4 h-4 inline-block mr-1 mb-0.5 text-slate-400" /> RMFT</th>
+                  <th class="p-4 border-b border-slate-200 w-48">Nasabah</th>
+                  <th class="p-4 border-b border-slate-200 text-right">Nominal Pipeline</th>
+                  <th class="p-4 border-b border-slate-200">Produk</th>
+                  <th class="p-4 border-b border-slate-200 text-right">Realisasi</th>
+                  <th @click="togglePipelineSort" class="p-4 border-b border-slate-200 text-center cursor-pointer hover:bg-slate-200/50 transition-colors select-none group">
+                    <span class="inline-flex items-center">
+                      <Calendar class="w-4 h-4 mr-1 text-slate-400" /> Target Tanggal
+                      <ArrowUp v-if="pipelineSortOrder === 'asc'" class="w-4 h-4 ml-1 text-indigo-600" />
+                      <ArrowDown v-else-if="pipelineSortOrder === 'desc'" class="w-4 h-4 ml-1 text-indigo-600" />
+                      <ArrowUpDown v-else class="w-4 h-4 ml-1 text-slate-300 group-hover:text-slate-400" />
+                    </span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(item, idx) in pipelineAnalysis" :key="idx" class="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
-                  <td class="p-4">
-                    <div class="font-medium text-slate-800">{{ item.NAMA_RMFT || item.RMFT || '-' }}</div>
-                    <div class="text-[11px] text-slate-500 mt-1">{{ item.NAMA_NASABAH || item.Nasabah || item.NASABAH || '-' }}</div>
-                  </td>
-                  <td class="p-4 text-right font-semibold text-indigo-600">{{ formatJuta(item.PIPELINE || item.Pipeline || item.pipeline || 0) }}</td>
-                  <td class="p-4 text-right font-semibold text-blue-600">{{ formatJuta(item.REALISASI || item.Nominal || item.NOMINAL || item.nominal || 0) }}</td>
-                  <td class="p-4 text-center text-slate-500">{{ formatToLocalWIB(item.TANGGAL_TARGET || item.Tanggal || item.TANGGAL || '') }}</td>
-                  <td class="p-4 text-slate-500 max-w-xs truncate" :title="item.KETERANGAN || item.Ket || item.KETERANGAN">{{ item.KETERANGAN || item.Ket || item.KETERANGAN || '-' }}</td>
+                  <td class="p-4 font-bold text-slate-800 uppercase text-xs">{{ item.NAMA_RMFT || item.RMFT || '-' }}</td>
+                  <td class="p-4 font-medium text-slate-600">{{ item.NAMA_NASABAH || item.Nasabah || item.NASABAH || '-' }}</td>
+                  <td class="p-4 text-right font-black text-indigo-600">{{ formatNum(item.PIPELINE || item.Pipeline || item.pipeline || 0) }}</td>
+                  <td class="p-4 text-slate-500 font-medium">{{ item.KETERANGAN || item.Ket || item.KETERANGAN || '-' }}</td>
+                  <td class="p-4 text-right font-bold text-emerald-600">{{ formatNum(item.REALISASI || item.Nominal || item.NOMINAL || item.nominal || 0) }}</td>
+                  <td class="p-4 text-center font-medium text-slate-500">{{ formatToLocalWIB(item.TANGGAL_TARGET || item.Tanggal || item.TANGGAL || '') }}</td>
                 </tr>
                 <tr v-if="!pipelineAnalysis.length">
-                  <td colspan="5" class="p-8 text-center text-slate-500 font-medium">Tidak ada data Pipeline ditemukan.</td>
+                  <td colspan="6" class="p-8 text-center text-slate-500 font-medium">Tidak ada data Pipeline ditemukan.</td>
                 </tr>
               </tbody>
             </table>

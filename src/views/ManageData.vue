@@ -95,8 +95,8 @@ const availableDates = computed(() => {
     
     // Server sudah standarisasi format "YYYY-MM-DD"
     const str = val.toString().trim();
-    // Jika RKA atau rmft_ach ambil YYYY-MM, jika lain ambil Full Date
-    return (targetType.value === 'rka' || targetType.value === 'rmft_ach') ? str.substring(0, 7) : str.substring(0, 10);
+    // Jika RKA, rmft_ach, atau pipeline ambil YYYY-MM, jika lain ambil Full Date
+    return (targetType.value === 'rka' || targetType.value === 'rmft_ach' || targetType.value === 'pipeline') ? str.substring(0, 7) : str.substring(0, 10);
   }).filter(d => d && d.length >= 7);
 
   // Buat daftar unik dan urutkan terbaru di atas

@@ -15,8 +15,11 @@ import {
   ListChecks
 } from 'lucide-vue-next';
 
+const route = useRoute();
+const router = useRouter();
+
 // --- STATE / VARIABEL ---
-const inputType = ref('pegawai'); 
+const inputType = ref(route.query.tab || route.query.type || 'pegawai'); 
 const selectedProduct = ref('Giro'); 
 const rawPaste = ref('');
 const parsedData = ref([]);
@@ -48,9 +51,18 @@ const menuTabs = [
   { id: 'rmft_ach', l: 'Achievement RMFT', icon: Target }
 ];
 
-watch(inputType, () => {
+watch(() => route.query.tab || route.query.type, (newTab) => {
+  if (newTab) {
+    inputType.value = newTab;
+  }
+});
+
+watch(inputType, (newVal) => {
   rawPaste.value = '';
   parsedData.value = [];
+  if (route.query.tab !== newVal && route.query.type !== newVal) {
+    router.replace({ query: { ...route.query, tab: newVal } });
+  }
 });
 
 const cleanNum = (val) => {
