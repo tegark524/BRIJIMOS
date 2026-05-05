@@ -88,7 +88,7 @@ const availableDates = computed(() => {
     let val;
     if (targetType.value === 'rka') val = item.Bulan_Tahun;
     else if (targetType.value === 'pipeline') val = item.TANGGAL_TARGET || item.Tanggal || item.TANGGAL || item.tanggal;
-    else if (targetType.value === 'rmft_ach') val = item.BULAN || item.bulan;
+    else if (targetType.value === 'rmft_ach') val = item.BULAN || item.bulan || item.Tanggal_Data || item.TANGGAL || item.tanggal;
     else val = item.Tanggal_Data;
 
     if (!val) return null;

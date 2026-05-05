@@ -71,6 +71,8 @@ const cleanNum = (val) => {
   return isNaN(parseFloat(cleaned)) ? 0 : parseFloat(cleaned);
 };
 
+const activeVersion = ref('new');
+
 // --- LOGIKA SMART PASTE ---
 const handlePaste = () => {
   setTimeout(() => {
@@ -78,10 +80,83 @@ const handlePaste = () => {
     const result = [];
     let lastRMFT = ''; // Untuk menyimpan nama RMFT jika baris bawahnya kosong
 
+    // --- SETUP SMART MAPPING UNTUK RMFT_ACH ---
+    let rmftMap = {};
+    let isNewVersion = false;
+
+    if (inputType.value === 'rmft_ach') {
+      // Cari baris yang kemungkinan besar adalah header
+      const headerRow = rows.find(r => {
+        const up = r.trim().toUpperCase();
+        return up.includes('RMFT') || up.includes('TAB') || up.includes('GIRO') || up.includes('KETERANGAN') || up.includes('POSISI');
+      });
+      
+      if (headerRow) {
+        const upHeader = headerRow.toUpperCase();
+        if (upHeader.includes('POSISI TAB') || upHeader.includes('USER ACTIV') || upHeader.includes('CASA') || upHeader.includes('PH')) {
+          isNewVersion = true;
+        }
+
+        let headerCols = headerRow.trim().split('\t');
+        if (headerCols.length < 5) {
+          headerCols = headerRow.trim().split(/\s{2,}/);
+        }
+        headerCols = headerCols.map(c => c.trim().toUpperCase());
+        
+        if (isNewVersion) {
+          headerCols.forEach((col, idx) => {
+            if (col === 'KETERANGAN' || col.includes('RMFT')) rmftMap.rmft = idx;
+            else if (col.includes('AVG TAB')) rmftMap.avg_tab = idx;
+            else if (col.includes('POSISI TAB') || col.includes('POSISI')) rmftMap.posisi_tab = idx;
+            else if (col.includes('AVG GIRO')) rmftMap.avg_giro = idx;
+            else if (col.includes('AVG DPK')) rmftMap.avg_dpk = idx;
+            else if (col.includes('PAYROLL')) rmftMap.new_payroll = idx;
+            else if (col.includes('SV EDC')) rmftMap.sv_edc = idx; // Letakkan sebelum EDC agar tidak overlap
+            else if (col.includes('EDC') || col.includes('QRIS PROC')) rmftMap.edc_qris = idx;
+            else if (col.includes('CASA')) rmftMap.casa_me = idx;
+            else if (col.includes('ACTIV B') || col.includes('ACTIV') && col.includes('B')) rmftMap.user_activ_b = idx;
+            else if (col.includes('ACTIV QLOLA') || col.includes('ACTIV') && col.includes('QLOLA')) rmftMap.user_activ_qlola = idx;
+            else if (col.includes('PH')) rmftMap.ph_program = idx;
+            else if (col.includes('TOTAL')) rmftMap.total = idx;
+          });
+        } else {
+          headerCols.forEach((col, idx) => {
+            if (col.includes('RMFT') || col.includes('KETERANGAN')) rmftMap.rmft = idx;
+            else if (col.includes('TAB')) rmftMap.avg_tab = idx;
+            else if (col.includes('GIRO')) rmftMap.avg_giro = idx;
+            else if (col.includes('MERCHANT') || col.includes('MERCH')) rmftMap.dpk_merchant = idx;
+            else if (col.includes('DPK')) rmftMap.avg_dpk = idx;
+            else if (col.includes('FBI')) rmftMap.fbi_pa = idx;
+            else if (col.includes('EDC') || col.includes('QRIS')) rmftMap.edc_qris = idx;
+            else if (col.includes('SV') || col.includes('SALES')) rmftMap.sv = idx;
+            else if (col.includes('PAYROLL')) rmftMap.new_payroll = idx;
+            else if (col.includes('QLOLA')) rmftMap.prod_qlola = idx;
+            else if (col.includes('KANWIL')) rmftMap.prog_kanwil = idx;
+            else if (col.includes('SGF')) rmftMap.prog_sgf = idx;
+            else if (col.includes('TOTAL')) rmftMap.total = idx;
+          });
+        }
+      }
+
+      if (Object.keys(rmftMap).length === 0) {
+        rmftMap = {
+          rmft: 0, avg_tab: 1, posisi_tab: 2, avg_giro: 3, avg_dpk: 4, 
+          new_payroll: 5, edc_qris: 6, casa_me: 7, sv_edc: 8, 
+          user_activ_b: 9, user_activ_qlola: 10, ph_program: 11, total: 12
+        };
+        isNewVersion = true;
+      }
+      activeVersion.value = isNewVersion ? 'new' : 'old';
+    }
+
     rows.forEach(row => {
       const text = row.trim();
-      if (text === '' || text.toUpperCase().includes('RMFT') || text.toUpperCase().includes('NASABAH')) return;
-      const cols = text.split('\t'); 
+      const upText = text.toUpperCase();
+      if (text === '' || upText.includes('RMFT') || upText.includes('NASABAH') || upText.includes('KETERANGAN') || upText.includes('POSISI TAB') || upText.includes('AVG TAB')) return;
+      let cols = text.split('\t'); 
+      if (cols.length < 5) {
+        cols = text.split(/\s{2,}/);
+      }
       
       if (inputType.value === 'pegawai') {
         let pn = '', nama = '', g, t, d;
@@ -139,21 +214,27 @@ const handlePaste = () => {
       } else if (inputType.value === 'rmft_ach') {
         if (cols.length > 1) {
           result.push({
-            rmft: cols[0]?.trim() || 'Unknown RMFT',
-            avg_tab: cleanNum(cols[1]),
-            avg_giro: cleanNum(cols[2]),
-            avg_dpk: cleanNum(cols[3]),
-            fbi_pa: cleanNum(cols[4]),
-            edc_qris: cleanNum(cols[5]),
-            dpk_merchant: cleanNum(cols[6]),
-            sv: cleanNum(cols[7]),
-            new_payroll: cleanNum(cols[8]),
-            prod_qlola: cleanNum(cols[9]),
-            prog_kanwil: cleanNum(cols[10]),
-            prog_sgf: cleanNum(cols[11]),
-            total: cleanNum(cols[12]),
-            bulan: tanggalInput.value.substring(0, 7),
-            tanggal: tanggalInput.value
+            NAMA_RMFT: cols[rmftMap.rmft]?.trim() || 'Unknown RMFT',
+            AVG_TAB: cleanNum(cols[rmftMap.avg_tab]),
+            posisi_tab: cleanNum(cols[rmftMap.posisi_tab]),
+            AVG_GIRO: cleanNum(cols[rmftMap.avg_giro]),
+            AVG_DPK: cleanNum(cols[rmftMap.avg_dpk]),
+            FBI_PA: cleanNum(cols[rmftMap.fbi_pa]),
+            EDC_QRIS: cleanNum(cols[rmftMap.edc_qris]),
+            DPK_MERCHANT: cleanNum(cols[rmftMap.dpk_merchant]),
+            SV: cleanNum(cols[rmftMap.sv]),
+            NEW_PAYROLL: cleanNum(cols[rmftMap.new_payroll]),
+            PROD_QLOLA: cleanNum(cols[rmftMap.prod_qlola]),
+            PROG_KANWIL: cleanNum(cols[rmftMap.prog_kanwil]),
+            PROG_SGF: cleanNum(cols[rmftMap.prog_sgf]),
+            casa_me: cleanNum(cols[rmftMap.casa_me]),
+            sv_edc: cleanNum(cols[rmftMap.sv_edc]),
+            user_activ_b: cleanNum(cols[rmftMap.user_activ_b]),
+            user_activ_qlola: cleanNum(cols[rmftMap.user_activ_qlola]),
+            ph_program: cleanNum(cols[rmftMap.ph_program]),
+            TOTAL: cleanNum(cols[rmftMap.total]),
+            BULAN: tanggalInput.value.substring(0, 7),
+            TANGGAL: tanggalInput.value
           });
         }
       } else if (inputType.value === 'keragaan' || inputType.value === 'rka') {
@@ -300,7 +381,22 @@ const saveData = async () => {
                   <th class="p-5 border-b border-slate-700 text-center">Tanggal</th>
                   <th class="p-5 border-b border-slate-700 text-left rounded-tr-2xl">Ket</th>
                 </tr>
-                <tr v-else-if="inputType === 'rmft_ach'">
+                <tr v-else-if="inputType === 'rmft_ach' && activeVersion === 'new'">
+                  <th class="p-4 rounded-tl-2xl border-b border-slate-700 whitespace-nowrap">RMFT</th>
+                  <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">AVG TAB</th>
+                  <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">POSISI TAB</th>
+                  <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">AVG GIRO</th>
+                  <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">AVG DPK</th>
+                  <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">PAYROLL</th>
+                  <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">EDC & QRIS</th>
+                  <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">CASA ME</th>
+                  <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">SV EDC</th>
+                  <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">USER ACTIV B</th>
+                  <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">USER ACTIV QLOLA</th>
+                  <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">PH PROGRAM</th>
+                  <th class="p-4 border-b border-slate-700 text-right rounded-tr-2xl whitespace-nowrap">TOTAL</th>
+                </tr>
+                <tr v-else-if="inputType === 'rmft_ach' && activeVersion === 'old'">
                   <th class="p-4 rounded-tl-2xl border-b border-slate-700 whitespace-nowrap">RMFT</th>
                   <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">AVG TAB</th>
                   <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">AVG GIRO</th>
@@ -334,20 +430,35 @@ const saveData = async () => {
                     <td class="p-4 text-center font-bold text-slate-400 border-b border-slate-100">{{ formatDateIndo(d.tanggal) }}</td>
                     <td class="p-4 text-slate-400 font-bold border-b border-slate-100 italic">{{ d.ket }}</td>
                   </template>
-                  <template v-else-if="inputType === 'rmft_ach'">
-                    <td class="p-4 border-b border-slate-100 font-black text-blue-900 uppercase text-[10px] whitespace-nowrap">{{ d.rmft }}</td>
-                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.avg_tab }}%</td>
-                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.avg_giro }}%</td>
-                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.avg_dpk }}%</td>
-                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.fbi_pa }}%</td>
-                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.edc_qris }}%</td>
-                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.dpk_merchant }}%</td>
-                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.sv }}%</td>
-                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.new_payroll }}%</td>
-                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.prod_qlola }}%</td>
-                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.prog_kanwil }}%</td>
-                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.prog_sgf }}%</td>
-                    <td class="p-4 text-right font-black text-green-700 border-b border-slate-100">{{ d.total }}%</td>
+                  <template v-else-if="inputType === 'rmft_ach' && activeVersion === 'new'">
+                    <td class="p-4 border-b border-slate-100 font-black text-blue-900 uppercase text-[10px] whitespace-nowrap">{{ d.NAMA_RMFT }}</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.AVG_TAB }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.posisi_tab }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.AVG_GIRO }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.AVG_DPK }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.NEW_PAYROLL }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.EDC_QRIS }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.casa_me }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.sv_edc }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.user_activ_b }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.user_activ_qlola }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.ph_program }}%</td>
+                    <td class="p-4 text-right font-black text-green-700 border-b border-slate-100">{{ d.TOTAL }}%</td>
+                  </template>
+                  <template v-else-if="inputType === 'rmft_ach' && activeVersion === 'old'">
+                    <td class="p-4 border-b border-slate-100 font-black text-blue-900 uppercase text-[10px] whitespace-nowrap">{{ d.NAMA_RMFT }}</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.AVG_TAB }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.AVG_GIRO }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.AVG_DPK }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.FBI_PA }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.EDC_QRIS }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.DPK_MERCHANT }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.SV }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.NEW_PAYROLL }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.PROD_QLOLA }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.PROG_KANWIL }}%</td>
+                    <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.PROG_SGF }}%</td>
+                    <td class="p-4 text-right font-black text-green-700 border-b border-slate-100">{{ d.TOTAL }}%</td>
                   </template>
                   <template v-else>
                     <td class="p-5 font-black text-slate-700 border-b border-slate-100 uppercase">{{ d.pn || d.unit || d.produk }} <span class="block font-medium text-slate-400 text-[10px] mt-1">{{ d.nama || '' }}</span></td>

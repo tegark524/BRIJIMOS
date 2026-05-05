@@ -66,6 +66,11 @@ const formatToLocalWIB = (iso) => {
 
 const formatNum = (val) => (val === 0 || isNaN(val) ? '-' : val.toLocaleString('id-ID'));
 
+const formatPercent = (val) => {
+  if (val === undefined || val === null || val === '') return '-';
+  return val + '%';
+};
+
 const formatJuta = (val) => {
   const num = Number(val);
   if (num === 0 || isNaN(num)) return '-';
@@ -295,6 +300,36 @@ const rmftAchievementAnalysis = computed(() => {
     const rmft = String(i.NAMA_RMFT || i.RMFT || i.rmft || i['Keterangan (Nama RMFT)'] || i.KETERANGAN || i.Keterangan || '').toLowerCase();
     return rmft.includes(q);
   });
+});
+
+const rmftColHasData = computed(() => {
+  const data = rmftAchievementAnalysis.value;
+  if (!data.length) return {};
+  
+  const has = (key1, key2) => data.some(item => {
+    const val = item[key1] ?? item[key2];
+    return val !== 0 && val !== '0' && val !== null && val !== undefined && val !== '';
+  });
+
+  return {
+    avg_tab: has('AVG_TAB', 'avg_tab'),
+    posisi_tab: has('POSISI_TAB', 'posisi_tab'),
+    avg_giro: has('AVG_GIRO', 'avg_giro'),
+    avg_dpk: has('AVG_DPK', 'avg_dpk'),
+    fbi_pa: has('FBI_PA', 'fbi_pa'),
+    edc_qris: has('EDC_QRIS', 'edc_qris'),
+    dpk_merchant: has('DPK_MERCHANT', 'dpk_merchant'),
+    sv: has('SV', 'sv'),
+    new_payroll: has('NEW_PAYROLL', 'new_payroll'),
+    prod_qlola: has('PROD_QLOLA', 'prod_qlola'),
+    prog_kanwil: has('PROG_KANWIL', 'prog_kanwil'),
+    prog_sgf: has('PROG_SGF', 'prog_sgf'),
+    casa_me: has('CASA_ME', 'casa_me'),
+    sv_edc: has('SV_EDC', 'sv_edc'),
+    user_activ_b: has('USER_ACTIV_B', 'user_activ_b'),
+    user_activ_qlola: has('USER_ACTIV_QLOLA', 'user_activ_qlola'),
+    ph_program: has('PH_PROGRAM', 'ph_program'),
+  };
 });
 
 // --- CHARTS LOGIC ---
@@ -926,39 +961,51 @@ onMounted(fetchData);
             <table class="w-full text-left text-sm whitespace-nowrap min-w-[1200px]">
               <thead class="bg-slate-100 text-slate-600 uppercase text-xs font-semibold tracking-wider sticky top-0 z-10">
                 <tr>
-                  <th class="p-4 border-b border-slate-200 w-56 bg-slate-100 shadow-[0_1px_0_#e2e8f0]">Keterangan (Nama RMFT)</th>
-                  <th class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">AVG TAB</th>
-                  <th class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">AVG GIRO</th>
-                  <th class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">AVG DPK</th>
-                  <th class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">FBI PA non PA</th>
-                  <th class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">EDC Qris Prod</th>
-                  <th class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">DPK merchant</th>
-                  <th class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">SV</th>
-                  <th class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">New payroll</th>
-                  <th class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">Prod Qlola</th>
-                  <th class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">progam kanwil</th>
-                  <th class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">Progam SGF</th>
-                  <th class="p-4 border-b border-slate-200 text-right bg-indigo-50/50 shadow-[0_1px_0_#e2e8f0] text-indigo-800">Total</th>
+                  <th class="p-4 border-b border-slate-200 w-56 bg-slate-100 shadow-[0_1px_0_#e2e8f0]">RMFT</th>
+                  <th v-if="rmftColHasData.avg_tab" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">AVG TAB</th>
+                  <th v-if="rmftColHasData.posisi_tab" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">POSISI TAB</th>
+                  <th v-if="rmftColHasData.avg_giro" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">AVG GIRO</th>
+                  <th v-if="rmftColHasData.avg_dpk" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">AVG DPK</th>
+                  <th v-if="rmftColHasData.fbi_pa" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">FBI PA</th>
+                  <th v-if="rmftColHasData.edc_qris" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">EDC/QRIS</th>
+                  <th v-if="rmftColHasData.dpk_merchant" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">DPK MERCH</th>
+                  <th v-if="rmftColHasData.sv" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">SV</th>
+                  <th v-if="rmftColHasData.new_payroll" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">PAYROLL</th>
+                  <th v-if="rmftColHasData.prod_qlola" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">QLOLA</th>
+                  <th v-if="rmftColHasData.prog_kanwil" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">KANWIL</th>
+                  <th v-if="rmftColHasData.prog_sgf" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">SGF</th>
+                  <th v-if="rmftColHasData.casa_me" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">CASA ME</th>
+                  <th v-if="rmftColHasData.sv_edc" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">SV EDC</th>
+                  <th v-if="rmftColHasData.user_activ_b" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">USER ACTIV B</th>
+                  <th v-if="rmftColHasData.user_activ_qlola" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">USER ACTIV QLOLA</th>
+                  <th v-if="rmftColHasData.ph_program" class="p-4 border-b border-slate-200 text-right bg-slate-100 shadow-[0_1px_0_#e2e8f0]">PH PROGRAM</th>
+                  <th class="p-4 border-b border-slate-200 text-right bg-indigo-50/50 shadow-[0_1px_0_#e2e8f0] text-indigo-800">TOTAL</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="(item, idx) in rmftAchievementAnalysis" :key="idx" class="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
                   <td class="p-4 font-medium text-slate-800">{{ item.NAMA_RMFT || item.RMFT || item.rmft || item['Keterangan (Nama RMFT)'] || item.KETERANGAN || item.Keterangan || '-' }}</td>
-                  <td class="p-4 text-right text-slate-600">{{ item.AVG_TAB || item.avg_tab || 0 }}%</td>
-                  <td class="p-4 text-right text-slate-600">{{ item.AVG_GIRO || item.avg_giro || 0 }}%</td>
-                  <td class="p-4 text-right text-slate-600">{{ item.AVG_DPK || item.avg_dpk || 0 }}%</td>
-                  <td class="p-4 text-right text-slate-600">{{ item.FBI_PA || item.fbi_pa || 0 }}%</td>
-                  <td class="p-4 text-right text-slate-600">{{ item.EDC_QRIS || item.edc_qris || 0 }}%</td>
-                  <td class="p-4 text-right text-slate-600">{{ item.DPK_MERCHANT || item.dpk_merchant || 0 }}%</td>
-                  <td class="p-4 text-right text-slate-600">{{ item.SV || item.sv || 0 }}%</td>
-                  <td class="p-4 text-right text-slate-600">{{ item.NEW_PAYROLL || item.new_payroll || 0 }}%</td>
-                  <td class="p-4 text-right text-slate-600">{{ item.PROD_QLOLA || item.prod_qlola || 0 }}%</td>
-                  <td class="p-4 text-right text-slate-600">{{ item.PROG_KANWIL || item.prog_kanwil || 0 }}%</td>
-                  <td class="p-4 text-right text-slate-600">{{ item.PROG_SGF || item.prog_sgf || 0 }}%</td>
-                  <td class="p-4 text-right font-semibold text-indigo-700 bg-indigo-50/30">{{ item.TOTAL || item.total || 0 }}%</td>
+                  <td v-if="rmftColHasData.avg_tab" class="p-4 text-right text-slate-600">{{ formatPercent(item.AVG_TAB ?? item.avg_tab) }}</td>
+                  <td v-if="rmftColHasData.posisi_tab" class="p-4 text-right text-slate-600">{{ formatPercent(item.POSISI_TAB ?? item.posisi_tab) }}</td>
+                  <td v-if="rmftColHasData.avg_giro" class="p-4 text-right text-slate-600">{{ formatPercent(item.AVG_GIRO ?? item.avg_giro) }}</td>
+                  <td v-if="rmftColHasData.avg_dpk" class="p-4 text-right text-slate-600">{{ formatPercent(item.AVG_DPK ?? item.avg_dpk) }}</td>
+                  <td v-if="rmftColHasData.fbi_pa" class="p-4 text-right text-slate-600">{{ formatPercent(item.FBI_PA ?? item.fbi_pa) }}</td>
+                  <td v-if="rmftColHasData.edc_qris" class="p-4 text-right text-slate-600">{{ formatPercent(item.EDC_QRIS ?? item.edc_qris) }}</td>
+                  <td v-if="rmftColHasData.dpk_merchant" class="p-4 text-right text-slate-600">{{ formatPercent(item.DPK_MERCHANT ?? item.dpk_merchant) }}</td>
+                  <td v-if="rmftColHasData.sv" class="p-4 text-right text-slate-600">{{ formatPercent(item.SV ?? item.sv) }}</td>
+                  <td v-if="rmftColHasData.new_payroll" class="p-4 text-right text-slate-600">{{ formatPercent(item.NEW_PAYROLL ?? item.new_payroll) }}</td>
+                  <td v-if="rmftColHasData.prod_qlola" class="p-4 text-right text-slate-600">{{ formatPercent(item.PROD_QLOLA ?? item.prod_qlola) }}</td>
+                  <td v-if="rmftColHasData.prog_kanwil" class="p-4 text-right text-slate-600">{{ formatPercent(item.PROG_KANWIL ?? item.prog_kanwil) }}</td>
+                  <td v-if="rmftColHasData.prog_sgf" class="p-4 text-right text-slate-600">{{ formatPercent(item.PROG_SGF ?? item.prog_sgf) }}</td>
+                  <td v-if="rmftColHasData.casa_me" class="p-4 text-right text-slate-600">{{ formatPercent(item.CASA_ME ?? item.casa_me) }}</td>
+                  <td v-if="rmftColHasData.sv_edc" class="p-4 text-right text-slate-600">{{ formatPercent(item.SV_EDC ?? item.sv_edc) }}</td>
+                  <td v-if="rmftColHasData.user_activ_b" class="p-4 text-right text-slate-600">{{ formatPercent(item.USER_ACTIV_B ?? item.user_activ_b) }}</td>
+                  <td v-if="rmftColHasData.user_activ_qlola" class="p-4 text-right text-slate-600">{{ formatPercent(item.USER_ACTIV_QLOLA ?? item.user_activ_qlola) }}</td>
+                  <td v-if="rmftColHasData.ph_program" class="p-4 text-right text-slate-600">{{ formatPercent(item.PH_PROGRAM ?? item.ph_program) }}</td>
+                  <td class="p-4 text-right font-semibold text-indigo-700 bg-indigo-50/30">{{ formatPercent(item.TOTAL ?? item.total) }}</td>
                 </tr>
                 <tr v-if="!rmftAchievementAnalysis.length">
-                  <td colspan="13" class="p-8 text-center text-slate-500 font-medium">Tidak ada data Pencapaian RMFT ditemukan pada bulan ini.</td>
+                  <td colspan="19" class="p-8 text-center text-slate-500 font-medium">Tidak ada data Pencapaian RMFT ditemukan pada bulan ini.</td>
                 </tr>
               </tbody>
             </table>
