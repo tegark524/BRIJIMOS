@@ -271,6 +271,8 @@ const saveData = async () => {
     const res = await response.json();
     if (res.status === 'success') {
       alert(`🚀 BERHASIL!\n${parsedData.value.length} data ${inputType.value} periode ${formatDateIndo(tanggalInput.value)} sudah masuk.`);
+          sessionStorage.removeItem('brijimos_data');
+          sessionStorage.removeItem('brijimos_data_timestamp');
       parsedData.value = [];
       rawPaste.value = '';
     } else {

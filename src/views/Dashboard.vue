@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Users, Building2, Activity, TrendingUp, Target, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-vue-next';
+import { Users, Building2, Activity, TrendingUp, Target, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, RefreshCw } from 'lucide-vue-next';
 
 // --- STATE / VARIABEL UTAMA ---
 const route = useRoute();
@@ -90,11 +90,31 @@ const cellBgClass = (val, threshold = 0) => {
 };
 
 // --- FETCH DATA ---
-const fetchData = async () => {
+const fetchData = async (forceRefresh = false) => {
   isLoading.value = true;
   try {
-    const response = await fetch(apiUrl);
-    const data = await response.json();
+    const CACHE_KEY = 'brijimos_data';
+    const CACHE_TIME_KEY = 'brijimos_data_timestamp';
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 menit
+    const now = new Date().getTime();
+    
+    let data;
+    const cachedData = sessionStorage.getItem(CACHE_KEY);
+    const cacheTime = sessionStorage.getItem(CACHE_TIME_KEY);
+
+    if (!forceRefresh && cachedData && cacheTime && (now - Number(cacheTime)) < CACHE_DURATION) {
+      data = JSON.parse(cachedData);
+    } else {
+      const response = await fetch(apiUrl);
+      data = await response.json();
+      try {
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        sessionStorage.setItem(CACHE_TIME_KEY, now.toString());
+      } catch (e) {
+        console.warn('Cache storage failed', e);
+      }
+    }
+
     rawData.value = { ...data, pipeline: data.pipeline || [], rmft_ach: data.rmft_ach || [] };
     
     // Set Default Dates
@@ -622,6 +642,11 @@ onMounted(fetchData);
       </div>
 
       <div class="flex items-center space-x-4 bg-white p-3 px-5 rounded-2xl border shadow-sm border-slate-200 w-full lg:w-auto justify-between lg:justify-start">
+        <button @click="fetchData(true)" :disabled="isLoading" class="flex items-center text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors disabled:opacity-50" title="Refresh Data">
+          <RefreshCw class="w-4 h-4 mr-1.5" :class="{ 'animate-spin': isLoading }" />
+          Refresh
+        </button>
+        <div class="w-px h-6 bg-slate-200 hidden lg:block"></div>
         <span class="text-[10px] font-black uppercase text-slate-400">Ukuran Tabel: {{ Math.round(tableScale * 100) }}%</span>
         <input type="range" min="0.5" max="1.5" step="0.1" v-model="tableScale" class="w-32 accent-blue-600 cursor-pointer" />
       </div>

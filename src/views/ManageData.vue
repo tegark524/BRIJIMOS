@@ -45,11 +45,31 @@ const showToast = (message, type = 'success') => {
 // GANTI DENGAN URL APPS SCRIPT PALING BARU KAMU!
 const apiUrl = import.meta.env.VITE_API_URL; 
 
-const fetchData = async () => {
+const fetchData = async (forceRefresh = false) => {
   isLoading.value = true;
   try {
-    const response = await fetch(apiUrl);
-    const data = await response.json();
+    const CACHE_KEY = 'brijimos_data';
+    const CACHE_TIME_KEY = 'brijimos_data_timestamp';
+    const CACHE_DURATION = 5 * 60 * 1000; // 5 menit
+    const now = new Date().getTime();
+    
+    let data;
+    const cachedData = sessionStorage.getItem(CACHE_KEY);
+    const cacheTime = sessionStorage.getItem(CACHE_TIME_KEY);
+
+    if (!forceRefresh && cachedData && cacheTime && (now - Number(cacheTime)) < CACHE_DURATION) {
+      data = JSON.parse(cachedData);
+    } else {
+      const response = await fetch(apiUrl);
+      data = await response.json();
+      try {
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
+        sessionStorage.setItem(CACHE_TIME_KEY, now.toString());
+      } catch (e) {
+        console.warn('Cache storage failed', e);
+      }
+    }
+
     rawData.value = {
       pegawai: data.pegawai || [],
       unit: data.unit || [],
@@ -123,7 +143,9 @@ const deleteData = async () => {
 
     if (res.status === 'success') {
       showToast(`Berhasil! Data ${targetType.value.toUpperCase()} periode ${selectedDateToDelete.value} telah dihapus.`, 'success');
-      await fetchData(); // Sinkronkan ulang daftar tanggal
+      sessionStorage.removeItem('brijimos_data');
+      sessionStorage.removeItem('brijimos_data_timestamp');
+      await fetchData(true); // Sinkronkan ulang daftar tanggal
     } else {
       showToast('Gagal: ' + res.message, 'error');
     }
