@@ -71,6 +71,71 @@ const cleanNum = (val) => {
   return isNaN(parseFloat(cleaned)) ? 0 : parseFloat(cleaned);
 };
 
+// Parser Tanggal Indo ("4 Mei 2026" / "04/05/2026" -> "2026-05-04")
+// Parser Tanggal Indo ("4 Mei 2026" / "04-Mei-26" / "04/05/2026" -> "2026-05-04")
+const parseIndoDate = (dateStr) => {
+  if (!dateStr) return null;
+  // Ganti semua tanda hubung (termasuk en-dash), garis miring, titik menjadi spasi
+  let cleanStr = dateStr.toString().trim().replace(/[-–—\/.,]/g, ' ').replace(/\s+/g, ' ').toLowerCase();
+
+  const months = {
+    'januari': '01', 'jan': '01',
+    'februari': '02', 'feb': '02', 'febuari': '02',
+    'maret': '03', 'mar': '03',
+    'april': '04', 'apr': '04',
+    'mei': '05', 'may': '05',
+    'juni': '06', 'jun': '06',
+    'juli': '07', 'jul': '07',
+    'agustus': '08', 'agu': '08', 'agt': '08', 'aug': '08',
+    'september': '09', 'sep': '09',
+    'oktober': '10', 'okt': '10', 'oct': '10',
+    'november': '11', 'nov': '11',
+    'desember': '12', 'des': '12', 'dec': '12'
+  };
+
+  const parts = cleanStr.split(' ');
+  if (parts.length >= 3) {
+    if (parts[0].length === 4 && !isNaN(parts[0])) {
+      let y = parts[0];
+      let mRaw = parts[1];
+      let m = months[mRaw];
+      if (!m && /^\d+$/.test(mRaw)) {
+        let mNum = parseInt(mRaw, 10);
+        if (mNum >= 1 && mNum <= 12) m = mRaw.padStart(2, '0');
+      }
+      let dNum = parseInt(parts[2], 10);
+      if (m && dNum >= 1 && dNum <= 31) {
+        return `${y}-${m}-${parts[2].replace(/\D/g, '').padStart(2, '0')}`;
+      }
+    } else {
+      let d = parts[0].replace(/\D/g, '').padStart(2, '0');
+      let mRaw = parts[1];
+      let m = months[mRaw];
+      if (!m && /^\d+$/.test(mRaw)) {
+        let mNum = parseInt(mRaw, 10);
+        if (mNum >= 1 && mNum <= 12) m = mRaw.padStart(2, '0');
+      }
+      let y = parts[2].replace(/\D/g, '');
+      
+      let dNum = parseInt(d, 10);
+      if (dNum >= 1 && dNum <= 31 && m && y && y.length >= 2) {
+        if (y.length === 2) y = "20" + y;
+        return `${y}-${m}-${d}`;
+      }
+    }
+  }
+  return null;
+};
+
+const mapJenisProduct = (k) => {
+  if (!k) return '-';
+  const up = k.trim().toUpperCase();
+  if (up === 'G' || up === 'GIRO') return 'GIRO';
+  if (up === 'T' || up === 'TAB' || up === 'TABUNGAN') return 'TAB';
+  if (up === 'D' || up === 'DEP' || up === 'DEPO' || up === 'DEPOSITO') return 'DEPO';
+  return up;
+};
+
 const activeVersion = ref('new');
 
 // --- LOGIKA SMART PASTE ---
@@ -79,6 +144,7 @@ const handlePaste = () => {
     const rows = rawPaste.value.split('\n');
     const result = [];
     let lastRMFT = ''; // Untuk menyimpan nama RMFT jika baris bawahnya kosong
+    let lastFormatIndex = -1; // Menyimpan letak kolom tanggal dari baris sebelumnya
 
     // --- SETUP SMART MAPPING UNTUK RMFT_ACH ---
     let rmftMap = {};
@@ -181,33 +247,78 @@ const handlePaste = () => {
         result.push({ unit, nama: namaUker, produk: selectedProduct.value, nilai, tanggal: tanggalInput.value });
 
       } else if (inputType.value === 'pipeline') {
-        // Mapping: RMFT(0), Nasabah(1), Pipeline(2), Ket(3), Nominal(4), Tgl(5)
-        // Kita gunakan length >= 3 agar data minimal RMFT+Nasabah+Pipeline tetap masuk
         if (cols.length >= 3) {
           let currentRMFT = cols[0].trim();
           
-          // Sticky RMFT: Jika kolom RMFT kosong, ambil dari baris di atasnya
           if (!currentRMFT && lastRMFT) {
             currentRMFT = lastRMFT;
           } else if (currentRMFT) {
             lastRMFT = currentRMFT;
           }
 
-          // Cek jika ada kolom tanggal di kolom terakhir (format DD/MM/YYYY)
           let rowDate = tanggalInput.value;
-          const datePart = cols[cols.length - 1]?.trim();
-          if (datePart && datePart.includes('/')) {
-            const [d, m, y] = datePart.split('/');
-            rowDate = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+          let pPipeline = 0, pNominal = 0, pKet = '-';
+
+          let dateMatch = null;
+          for (let i = 2; i < Math.min(cols.length, 6); i++) {
+             const parsed = parseIndoDate(cols[i]?.trim());
+             if (parsed) {
+                dateMatch = { index: i, date: parsed };
+                break;
+             }
+          }
+
+          let usedIndex = -1;
+          const isProd = (val) => {
+            const up = val?.trim().toUpperCase();
+            return ['T', 'G', 'D', 'TAB', 'GIRO', 'DEPO', 'TABUNGAN', 'DEPOSITO'].includes(up);
+          };
+
+          if (dateMatch) {
+            rowDate = dateMatch.date;
+            usedIndex = dateMatch.index;
+            lastFormatIndex = usedIndex;
+          } else if (lastFormatIndex !== -1) {
+            usedIndex = lastFormatIndex;
+            rowDate = ''; // Biarkan tanggal kosong sesuai input jika kolom kosong
+          } else {
+            // Heuristik jika baris pertama langsung kosong tanggalnya
+            if (isProd(cols[3])) { usedIndex = 2; rowDate = ''; }
+            else if (isProd(cols[4])) { usedIndex = 3; rowDate = ''; }
+          }
+
+          if (usedIndex === 3) {
+              // FORMAT BARU: RMFT(0), Nasabah(1), Nominal Pipeline(2), Tanggal(3), Jenis(4)
+              pPipeline = cleanNum(cols[2]);
+              pKet = mapJenisProduct(cols[4]);
+              pNominal = cleanNum(cols[5]) || 0;
+          } else if (usedIndex === 2) {
+              // FORMAT LAIN: RMFT(0), Nasabah(1), Tanggal(2), Jenis(3), Nominal Pipeline(4), Realisasi(5)
+              pKet = mapJenisProduct(cols[3]);
+              pPipeline = cleanNum(cols[4]);
+              pNominal = cleanNum(cols[5]);
+          } else if (usedIndex > 3) {
+              // FORMAT LAMA: RMFT, Nasabah, Pipeline, Ket, Nominal, Tgl(last)
+              pPipeline = cleanNum(cols[2]);
+              pKet = cols[3]?.trim() || '-';
+              pNominal = cleanNum(cols[4]);
+          } else {
+            // FORMAT DEFAULT
+            pPipeline = cleanNum(cols[2]);
+            pKet = cols[3]?.trim() || '-';
+            pNominal = cleanNum(cols[4]);
+            if (!dateMatch && lastFormatIndex === -1 && usedIndex === -1) {
+                rowDate = tanggalInput.value;
+            }
           }
 
           result.push({
-            rmft: currentRMFT || 'Unknown RMFT',
-            nasabah: cols[1]?.trim() || 'Nasabah Umum',
-            pipeline: cleanNum(cols[2]),
-            ket: cols[3]?.trim() || '-',
-            nominal: cleanNum(cols[4]),
-            tanggal: rowDate
+            NAMA_RMFT: currentRMFT || 'Unknown RMFT',
+            NAMA_NASABAH: cols[1]?.trim() || 'Nasabah Umum',
+            PIPELINE: pPipeline,
+            KETERANGAN: pKet,
+            NOMINAL: pNominal,
+            TANGGAL: rowDate
           });
         }
 
@@ -424,13 +535,13 @@ const saveData = async () => {
                 <tr v-for="(d, i) in parsedData" :key="i" class="hover:bg-blue-50/50 transition-colors">
                   <template v-if="inputType === 'pipeline'">
                     <td class="p-4 border-b border-slate-100">
-                      <div class="font-black text-blue-900 uppercase text-[11px]">{{ d.rmft || '-' }}</div>
-                      <div class="font-bold text-slate-400 text-[9px] mt-1">{{ d.nasabah || '-' }}</div>
+                      <div class="font-black text-blue-900 uppercase text-[11px]">{{ d.NAMA_RMFT || '-' }}</div>
+                      <div class="font-bold text-slate-400 text-[9px] mt-1">{{ d.NAMA_NASABAH || '-' }}</div>
                     </td>
-                    <td class="p-4 text-right font-black text-amber-600 border-b border-slate-100">{{ d.pipeline.toLocaleString('id-ID') }}</td>
-                    <td class="p-4 text-right font-black text-green-700 border-b border-slate-100">{{ d.nominal.toLocaleString('id-ID') }}</td>
-                    <td class="p-4 text-center font-bold text-slate-400 border-b border-slate-100">{{ formatDateIndo(d.tanggal) }}</td>
-                    <td class="p-4 text-slate-400 font-bold border-b border-slate-100 italic">{{ d.ket }}</td>
+                    <td class="p-4 text-right font-black text-amber-600 border-b border-slate-100">{{ d.PIPELINE.toLocaleString('id-ID') }}</td>
+                    <td class="p-4 text-right font-black text-green-700 border-b border-slate-100">{{ d.NOMINAL.toLocaleString('id-ID') }}</td>
+                    <td class="p-4 text-center font-bold text-slate-400 border-b border-slate-100">{{ formatDateIndo(d.TANGGAL) }}</td>
+                    <td class="p-4 text-slate-400 font-bold border-b border-slate-100 italic">{{ d.KETERANGAN }}</td>
                   </template>
                   <template v-else-if="inputType === 'rmft_ach' && activeVersion === 'new'">
                     <td class="p-4 border-b border-slate-100 font-black text-blue-900 uppercase text-[10px] whitespace-nowrap">{{ d.NAMA_RMFT }}</td>
