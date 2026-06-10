@@ -1,6 +1,7 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { clearCache } from '../store';
 import {
   Users,
   Building2,
@@ -12,7 +13,12 @@ import {
   UploadCloud,
   Calendar,
   Send,
-  ListChecks
+  ListChecks,
+  Info,
+  Copy,
+  Check,
+  Sparkles,
+  AlertCircle
 } from 'lucide-vue-next';
 
 const route = useRoute();
@@ -26,7 +32,137 @@ const parsedData = ref([]);
 const tanggalInput = ref(new Date().toISOString().split('T')[0]);
 const isSaving = ref(false);
 
-const apiUrl = import.meta.env.VITE_API_URL; 
+// --- DATA CONTOH & STRUKTUR STATIC ---
+const rmftAchFormat = ref('terbaru'); // 'terbaru' | 'dasar'
+
+const sampleDataStatic = {
+  pegawai: {
+    title: 'Dana RMFT',
+    columns: ['PN - Nama', 'Saldo Giro', 'Saldo Tabungan', 'Saldo Deposito'],
+    raw: `9012345 - Budi Santoso	150.000.000	250.000.000	500.000.000
+9012346 - Siti Aminah	75.000.000	120.000.000	0
+9012347 - Andi Wijaya	0	450.000.000	1.000.000.000`,
+    desc: 'Pastikan 3 kolom terakhir adalah nilai Saldo Giro, Tabungan, dan Deposito secara berurutan. Format PN - Nama bisa dalam satu kolom (menggunakan tanda minus) atau dipisah dalam dua kolom.'
+  },
+  uker: {
+    title: 'Unit Kerja',
+    columns: ['Kode Uker - Nama Uker', 'Nilai Saldo'],
+    raw: `0123 - KC Jakarta Central	50.000.000.000
+4567 - KCP Mangga Dua	12.500.000.000
+8901 - KCP Sudirman	8.750.000.000`,
+    desc: 'Pilih jenis produk di dropdown kiri terlebih dahulu, kemudian paste kode & nama uker beserta nilai saldonya.'
+  },
+  keragaan: {
+    title: 'Keragaan',
+    columns: ['Nama Produk', 'Nilai Pencapaian'],
+    raw: `TOTAL DANA	125.400.000.000
+GIRO	45.200.000.000
+TAB	60.100.000.000
+DEP	20.100.000.000
+SALES VOLUME QRIS	1.250.000.000`,
+    desc: 'Nama produk harus sesuai dengan daftar produk sistem (misal: TOTAL DANA, GIRO, TAB, DEP, SALES VOLUME QRIS, dll).'
+  },
+  rka: {
+    title: 'RKA',
+    columns: ['Nama Produk', 'Target RKA'],
+    raw: `TOTAL DANA	130.000.000.000
+GIRO	50.000.000.000
+TAB	65.000.000.000
+DEP	15.000.000.000`,
+    desc: 'Nama produk harus sesuai dengan daftar produk sistem (misal: TOTAL DANA, GIRO, TAB, DEP, dll).'
+  },
+  pipeline: {
+    title: 'Pipeline',
+    columns: ['RMFT', 'Nama Nasabah', 'Nominal Pipeline', 'Tanggal (DD/MM/YYYY)', 'Jenis', 'Nominal Realisasi'],
+    raw: `Budi Santoso	PT Selalu Jaya	150.000.000	09/06/2026	Giro	120.000.000
+Siti Aminah	PT Sukses Abadi	250.000.000	10/06/2026	Tabungan	200.000.000
+Andi Wijaya	UD Makmur	50.000.000	11/06/2026	Deposito	50.000.000`,
+    desc: 'Sistem mendeteksi format secara dinamis dengan melacak kolom tanggal. Bisa menggunakan format Tanggal di kolom 3 atau 4.'
+  }
+};
+
+// --- DATA CONTOH AKTIF (COMPUTED DYNAMIC) ---
+const activeSample = computed(() => {
+  if (inputType.value === 'rmft_ach') {
+    if (rmftAchFormat.value === 'terbaru') {
+      return {
+        title: 'Achievement RMFT (Format Terbaru)',
+        columns: ['RMFT', 'AVG TAB', 'POSISI TAB', 'AVG GIRO', 'AVG DPK', 'EDC/QRIS', 'PAYROLL', 'CASA ME', 'SV EDC', 'USER ACTIV B', 'USER ACTIV QLOLA', 'PH PROGRAM', 'TOTAL'],
+        raw: `RMFT	AVG TAB	POSISI TAB	AVG GIRO	AVG DPK	EDC/QRIS	PAYROLL	CASA ME	SV EDC	USER ACTIV B	USER ACTIV QLOLA	PH PROGRAM	TOTAL
+Budi Santoso	85%	90%	75%	80%	70%	95%	85%	90%	65%	60%	80%	82%
+Siti Aminah	90%	95%	80%	88%	75%	90%	80%	85%	70%	65%	85%	85%`,
+        desc: 'Achievement RMFT menggunakan FORMAT TERBARU. Pastikan baris header disertakan agar pemetaan kolom terdeteksi secara dinamis oleh parser.'
+      };
+    } else {
+      return {
+        title: 'Achievement RMFT (Format Dasar)',
+        columns: ['RMFT', 'AVG TAB', 'AVG GIRO', 'AVG DPK', 'FBI PA', 'EDC/QRIS', 'DPK MERCH', 'SV', 'PAYROLL', 'QLOLA', 'KANWIL', 'SGF', 'TOTAL'],
+        raw: `RMFT	AVG TAB	AVG GIRO	AVG DPK	FBI PA	EDC/QRIS	DPK MERCH	SV	PAYROLL	QLOLA	KANWIL	SGF	TOTAL
+Budi Santoso	85%	75%	80%	90%	70%	65%	85%	95%	60%	80%	75%	78%
+Siti Aminah	90%	80%	88%	85%	75%	70%	80%	90%	65%	85%	80%	82%`,
+        desc: 'Achievement RMFT menggunakan FORMAT DASAR (Lama). Pastikan baris header disertakan agar pemetaan kolom terdeteksi secara dinamis oleh parser.'
+      };
+    }
+  }
+  return sampleDataStatic[inputType.value] || {};
+});
+
+const isCopied = ref(false);
+
+const loadSample = () => {
+  const sample = activeSample.value;
+  if (sample) {
+    rawPaste.value = sample.raw;
+    handlePaste();
+  }
+};
+
+const copySample = async () => {
+  const sample = activeSample.value;
+  if (sample) {
+    try {
+      await navigator.clipboard.writeText(sample.raw);
+      isCopied.value = true;
+      setTimeout(() => {
+        isCopied.value = false;
+      }, 2000);
+    } catch (err) {
+      alert('Gagal menyalin: ' + err.message);
+    }
+  }
+};
+
+const apiUrl = import.meta.env.VITE_API_URL;
+
+const validationErrors = computed(() => {
+  const errors = [];
+  if (!parsedData.value || parsedData.value.length === 0) return errors;
+
+  parsedData.value.forEach((row, index) => {
+    const rowNum = index + 1;
+    if (inputType.value === 'pegawai') {
+      if (!row.pn || String(row.pn).trim() === '') errors.push(`Baris ${rowNum}: PN Pegawai kosong.`);
+      if (!row.nama || String(row.nama).trim() === '') errors.push(`Baris ${rowNum}: Nama Pegawai kosong.`);
+    } else if (inputType.value === 'uker') {
+      if (!row.unit || String(row.unit).trim() === '') errors.push(`Baris ${rowNum}: Kode Unit Kerja kosong.`);
+      if (!row.nama || String(row.nama).trim() === '' || row.nama === 'Unit Kerja') errors.push(`Baris ${rowNum}: Nama Unit Kerja tidak valid.`);
+    } else if (inputType.value === 'keragaan' || inputType.value === 'rka') {
+      if (!row.produk || String(row.produk).trim() === '') errors.push(`Baris ${rowNum}: Produk kosong.`);
+    } else if (inputType.value === 'pipeline') {
+      if (!row.NAMA_RMFT || String(row.NAMA_RMFT).trim() === '' || row.NAMA_RMFT === 'Unknown RMFT') {
+        errors.push(`Baris ${rowNum}: Nama RMFT tidak valid.`);
+      }
+      if (!row.TANGGAL || String(row.TANGGAL).trim() === '') {
+        errors.push(`Baris ${rowNum}: Tanggal target pipeline kosong atau format tanggal tidak terdeteksi.`);
+      }
+    } else if (inputType.value === 'rmft_ach') {
+      if (!row.NAMA_RMFT || String(row.NAMA_RMFT).trim() === '' || row.NAMA_RMFT === 'Unknown RMFT') {
+        errors.push(`Baris ${rowNum}: Nama RMFT tidak valid.`);
+      }
+    }
+  });
+  return errors;
+}); 
 
 // --- FIX: URUTAN PRODUK ---
 const fixedProducts = [
@@ -67,7 +203,8 @@ watch(inputType, (newVal) => {
 
 const cleanNum = (val) => {
   if (!val || val === '-' || val === '') return 0;
-  let cleaned = val.toString().replace(/\./g, '').replace(/,/g, '.').replace(/%/g, '').trim();
+  let cleaned = val.toString().replace(/[^0-9.,%\-]/g, '').trim();
+  cleaned = cleaned.replace(/\./g, '').replace(/,/g, '.').replace(/%/g, '').trim();
   return isNaN(parseFloat(cleaned)) ? 0 : parseFloat(cleaned);
 };
 
@@ -164,7 +301,7 @@ const handlePaste = () => {
         }
 
         let headerCols = headerRow.trim().split('\t');
-        if (headerCols.length < 5) {
+        if (headerCols.length === 1) {
           headerCols = headerRow.trim().split(/\s{2,}/);
         }
         headerCols = headerCols.map(c => c.trim().toUpperCase());
@@ -212,6 +349,9 @@ const handlePaste = () => {
         };
         isNewVersion = true;
       }
+      if (rmftMap.rmft === undefined && Object.keys(rmftMap).length > 0) {
+        rmftMap.rmft = 0;
+      }
       activeVersion.value = isNewVersion ? 'new' : 'old';
     }
 
@@ -220,7 +360,7 @@ const handlePaste = () => {
       const upText = text.toUpperCase();
       if (text === '' || upText.includes('RMFT') || upText.includes('NASABAH') || upText.includes('KETERANGAN') || upText.includes('POSISI TAB') || upText.includes('AVG TAB')) return;
       let cols = text.split('\t'); 
-      if (cols.length < 5) {
+      if (cols.length === 1) {
         cols = text.split(/\s{2,}/);
       }
       
@@ -382,8 +522,7 @@ const saveData = async () => {
     const res = await response.json();
     if (res.status === 'success') {
       alert(`🚀 BERHASIL!\n${parsedData.value.length} data ${inputType.value} periode ${formatDateIndo(tanggalInput.value)} sudah masuk.`);
-          sessionStorage.removeItem('brijimos_data');
-          sessionStorage.removeItem('brijimos_data_timestamp');
+      clearCache();
       parsedData.value = [];
       rawPaste.value = '';
     } else {
@@ -414,7 +553,7 @@ const saveData = async () => {
 
     <!-- Mobile Dropdown -->
     <div class="block lg:hidden w-full mb-8 relative">
-      <select v-model="inputType" class="w-full border border-slate-200 p-3.5 rounded-xl bg-white font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all appearance-none cursor-pointer shadow-sm">
+      <select v-model="inputType" class="w-full border border-slate-200 p-3.5 rounded-xl bg-white font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none cursor-pointer shadow-sm">
         <option v-for="m in menuTabs" :key="m.id" :value="m.id">{{ m.l }}</option>
       </select>
       <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▼</div>
@@ -424,7 +563,7 @@ const saveData = async () => {
     <div class="hidden lg:flex flex-wrap gap-2 p-1.5 bg-white rounded-xl w-full lg:w-fit mb-8 border border-slate-200 shadow-sm">
       <button v-for="m in menuTabs" 
         :key="m.id" @click="inputType = m.id" 
-        :class="inputType === m.id ? 'bg-indigo-50 text-indigo-700 shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'"
+        :class="inputType === m.id ? 'bg-blue-50 text-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'"
         class="flex items-center px-4 py-2 rounded-lg font-semibold transition-all text-sm"
       >
         <component :is="m.icon" class="w-4 h-4 mr-2" />
@@ -463,7 +602,84 @@ const saveData = async () => {
             </div>
           </div>
         </div>
+
+        <!-- Panduan Struktur & Contoh Data -->
+        <div class="bg-white p-8 rounded-[3rem] shadow-2xl border border-slate-100 space-y-6 relative overflow-hidden">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+              <Info class="w-5 h-5" />
+            </div>
+            <div>
+              <h4 class="font-black text-slate-700 text-sm tracking-tight uppercase">Panduan Struktur Kolom</h4>
+              <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Format Data & Contoh Untuk {{ activeSample?.title }}</p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <!-- Deskripsi -->
+            <p class="text-xs text-slate-500 leading-relaxed">
+              {{ activeSample?.desc }}
+            </p>
+
+            <!-- Format Toggle (Hanya untuk Achievement RMFT) -->
+            <div v-if="inputType === 'rmft_ach'" class="flex gap-2 p-1 bg-slate-50 border border-slate-200 rounded-2xl">
+              <button 
+                @click="rmftAchFormat = 'terbaru'"
+                :class="rmftAchFormat === 'terbaru' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                class="flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all"
+              >
+                Format Terbaru
+              </button>
+              <button 
+                @click="rmftAchFormat = 'dasar'"
+                :class="rmftAchFormat === 'dasar' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'"
+                class="flex-1 py-2 text-[9px] font-black uppercase rounded-xl transition-all"
+              >
+                Format Dasar
+              </button>
+            </div>
+
+            <!-- Struktur Kolom Badges -->
+            <div>
+              <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Struktur Kolom Excel (Kiri ke Kanan):</label>
+              <div class="flex flex-wrap gap-1.5">
+                <span 
+                  v-for="(col, index) in activeSample?.columns" 
+                  :key="index"
+                  class="px-2.5 py-1.5 bg-blue-50 border border-blue-100 rounded-xl text-[10px] font-bold text-blue-700"
+                >
+                  {{ col }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Preview Copyable Box -->
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Contoh Data Excel (Tinggal Copy-Paste):</label>
+                <button 
+                  @click="copySample" 
+                  class="flex items-center gap-1 text-[9px] text-blue-600 font-black uppercase tracking-wider hover:text-blue-700 transition-colors"
+                >
+                  <component :is="isCopied ? Check : Copy" class="w-3 h-3" />
+                  {{ isCopied ? 'Tersalin!' : 'Salin Contoh' }}
+                </button>
+              </div>
+              <pre class="bg-slate-50 border border-slate-100 rounded-2xl p-4 font-mono text-[10px] text-slate-600 overflow-x-auto whitespace-pre leading-relaxed shadow-inner max-h-40">{{ activeSample?.raw }}</pre>
+            </div>
+
+            <!-- Load Button -->
+            <button 
+              @click="loadSample" 
+              class="w-full py-4 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-200 rounded-2xl text-[10px] font-black text-slate-600 hover:text-blue-700 transition-all flex items-center justify-center gap-2 uppercase tracking-widest shadow-sm active:scale-[0.98]"
+            >
+              <Sparkles class="w-3.5 h-3.5 text-blue-500 animate-pulse" />
+              Gunakan Data Contoh
+            </button>
+          </div>
+        </div>
       </div>
+
 
       <div class="lg:col-span-8 flex flex-col">
         <div class="bg-white rounded-[3rem] shadow-2xl border border-slate-100 overflow-hidden flex flex-col h-full min-h-[600px]">
@@ -485,6 +701,18 @@ const saveData = async () => {
           </div>
 
           <div class="flex-1 overflow-auto p-4">
+            <!-- Alert Warning Validasi Data -->
+            <div v-if="validationErrors.length > 0" class="mb-6 p-6 bg-red-50 border-2 border-red-100 rounded-3xl space-y-3 animate-in fade-in duration-300">
+              <div class="flex items-center gap-2.5 text-red-800">
+                <AlertCircle class="w-5 h-5 shrink-0" />
+                <h4 class="font-black text-xs uppercase tracking-wider">Terdeteksi {{ validationErrors.length }} Masalah Data</h4>
+              </div>
+              <ul class="list-disc pl-5 text-[10px] text-red-600 font-bold space-y-1.5 max-h-32 overflow-y-auto">
+                <li v-for="(err, idx) in validationErrors.slice(0, 10)" :key="idx">{{ err }}</li>
+                <li v-if="validationErrors.length > 10" class="italic text-red-400 mt-1">... dan {{ validationErrors.length - 10 }} baris bermasalah lainnya. Silakan periksa kembali spreadsheet Anda.</li>
+              </ul>
+            </div>
+
             <table v-if="parsedData.length > 0" class="w-full text-left border-separate border-spacing-0">
               <thead class="bg-slate-800 text-white sticky top-0 z-10 uppercase text-[10px] tracking-widest text-center">
                 <tr v-if="inputType === 'pipeline'">
@@ -594,12 +822,19 @@ const saveData = async () => {
           <div class="p-8 bg-slate-50/80 border-t border-slate-200">
             <button 
               @click="saveData" 
-              :disabled="isSaving || parsedData.length === 0"
+              :disabled="isSaving || parsedData.length === 0 || validationErrors.length > 0"
+              :class="{ 'bg-rose-600 hover:bg-rose-700 shadow-rose-200': validationErrors.length > 0 && !isSaving }"
               class="w-full bg-blue-600 text-white font-black py-6 rounded-[2rem] hover:bg-blue-700 shadow-2xl shadow-blue-200 transition-all disabled:bg-slate-300 disabled:shadow-none active:scale-95 flex flex-col items-center justify-center space-y-1 uppercase tracking-widest"
             >
               <template v-if="!isSaving">
-                <span class="flex items-center gap-2 text-base"><Send class="w-5 h-5" /> KIRIM {{ parsedData.length }} DATA</span>
-                <span class="text-[9px] opacity-70 tracking-[0.2em]">UNTUK PERIODE {{ formatDateIndo(tanggalInput) }}</span>
+                <template v-if="validationErrors.length > 0">
+                  <span class="flex items-center gap-2 text-base"><AlertCircle class="w-5 h-5" /> PERBAIKI {{ validationErrors.length }} MASALAH DATA</span>
+                  <span class="text-[9px] opacity-70 tracking-[0.2em]">TIDAK BISA MENGIRIM DATA CACAT</span>
+                </template>
+                <template v-else>
+                  <span class="flex items-center gap-2 text-base"><Send class="w-5 h-5" /> KIRIM {{ parsedData.length }} DATA</span>
+                  <span class="text-[9px] opacity-70 tracking-[0.2em]">UNTUK PERIODE {{ formatDateIndo(tanggalInput) }}</span>
+                </template>
               </template>
               <template v-else>
                 <div class="flex items-center space-x-3">

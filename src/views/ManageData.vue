@@ -17,13 +17,23 @@ import {
   XCircle,
   X
 } from 'lucide-vue-next';
+import { store, fetchData as storeFetchData, clearCache } from '../store';
 
 const route = useRoute();
 const router = useRouter();
-const targetType = ref(route.query.type || 'unit'); 
-const selectedDateToDelete = ref('');
-const rawData = ref({ pegawai: [], unit: [], keragaan: [], rka: [], pipeline: [], rmft_ach: [] });
-const isLoading = ref(false);
+
+const targetType = computed({
+  get: () => store.manage.targetType,
+  set: (val) => { store.manage.targetType = val; }
+});
+
+const selectedDateToDelete = computed({
+  get: () => store.manage.selectedDateToDelete,
+  set: (val) => { store.manage.selectedDateToDelete = val; }
+});
+
+const rawData = computed(() => store.rawData);
+const isLoading = computed(() => store.isLoading);
 const isProcessing = ref(false);
 
 const categories = [
@@ -42,47 +52,13 @@ const showToast = (message, type = 'success') => {
   setTimeout(() => { toast.value.show = false; }, 4000);
 };
 
-// GANTI DENGAN URL APPS SCRIPT PALING BARU KAMU!
 const apiUrl = import.meta.env.VITE_API_URL; 
 
 const fetchData = async (forceRefresh = false) => {
-  isLoading.value = true;
   try {
-    const CACHE_KEY = 'brijimos_data';
-    const CACHE_TIME_KEY = 'brijimos_data_timestamp';
-    const CACHE_DURATION = 5 * 60 * 1000; // 5 menit
-    const now = new Date().getTime();
-    
-    let data;
-    const cachedData = sessionStorage.getItem(CACHE_KEY);
-    const cacheTime = sessionStorage.getItem(CACHE_TIME_KEY);
-
-    if (!forceRefresh && cachedData && cacheTime && (now - Number(cacheTime)) < CACHE_DURATION) {
-      data = JSON.parse(cachedData);
-    } else {
-      const response = await fetch(apiUrl);
-      data = await response.json();
-      try {
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify(data));
-        sessionStorage.setItem(CACHE_TIME_KEY, now.toString());
-      } catch (e) {
-        console.warn('Cache storage failed', e);
-      }
-    }
-
-    rawData.value = {
-      pegawai: data.pegawai || [],
-      unit: data.unit || [],
-      keragaan: data.keragaan || [],
-      rka: data.rka || [],
-      pipeline: data.pipeline || [],
-      rmft_ach: data.rmft_ach || []
-    };
-    selectedDateToDelete.value = ''; 
+    await storeFetchData(forceRefresh);
   } catch (error) {
     console.error("Fetch Error:", error);
-  } finally {
-    isLoading.value = false;
   }
 };
 
@@ -113,13 +89,10 @@ const availableDates = computed(() => {
 
     if (!val) return null;
     
-    // Server sudah standarisasi format "YYYY-MM-DD"
     const str = val.toString().trim();
-    // Jika RKA, rmft_ach, atau pipeline ambil YYYY-MM, jika lain ambil Full Date
     return (targetType.value === 'rka' || targetType.value === 'rmft_ach' || targetType.value === 'pipeline') ? str.substring(0, 7) : str.substring(0, 10);
   }).filter(d => d && d.length >= 7);
 
-  // Buat daftar unik dan urutkan terbaru di atas
   return [...new Set(dates)].sort().reverse();
 });
 
@@ -143,8 +116,7 @@ const deleteData = async () => {
 
     if (res.status === 'success') {
       showToast(`Berhasil! Data ${targetType.value.toUpperCase()} periode ${selectedDateToDelete.value} telah dihapus.`, 'success');
-      sessionStorage.removeItem('brijimos_data');
-      sessionStorage.removeItem('brijimos_data_timestamp');
+      clearCache();
       await fetchData(true); // Sinkronkan ulang daftar tanggal
     } else {
       showToast('Gagal: ' + res.message, 'error');
@@ -174,13 +146,8 @@ onMounted(fetchData);
       </div>
     </transition>
 
-    <div v-if="isLoading" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
-       <div class="w-12 h-12 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin"></div>
-       <p class="mt-4 font-semibold text-slate-600 text-xs tracking-widest animate-pulse">MEMUAT DATABASE...</p>
-    </div>
-
     <div class="flex items-center space-x-4 mb-8">
-      <Database class="w-10 h-10 text-indigo-600" />
+      <Database class="w-10 h-10 text-blue-600" />
       <div>
         <h1 class="text-3xl font-bold text-slate-800 tracking-tight leading-none">Manajemen Data</h1>
         <p class="text-sm text-slate-500 mt-1">Pembersihan dan Pemeliharaan Database BRIJIMOS</p>
@@ -196,7 +163,7 @@ onMounted(fetchData);
           
           <!-- Mobile Dropdown -->
           <div class="block md:hidden relative">
-            <select v-model="targetType" class="w-full border border-slate-200 p-3 rounded-xl bg-slate-50 font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all appearance-none cursor-pointer shadow-sm">
+            <select v-model="targetType" :disabled="isLoading" class="w-full border border-slate-200 p-3 rounded-xl bg-slate-50 font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all appearance-none cursor-pointer shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
               <option v-for="t in categories" :key="t.id" :value="t.id">{{ t.n }}</option>
             </select>
             <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▼</div>
@@ -206,10 +173,14 @@ onMounted(fetchData);
           <div class="hidden md:grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
             <button v-for="t in categories" 
               :key="t.id" @click="targetType = t.id"
-              :class="targetType === t.id ? 'bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'"
+              :disabled="isLoading"
+              :class="[
+                targetType === t.id ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50',
+                isLoading ? 'opacity-60 cursor-not-allowed' : ''
+              ]"
               class="p-3 flex flex-col items-center justify-center gap-2 rounded-xl border transition-all active:scale-[0.98]"
             >
-              <component :is="t.i" class="w-5 h-5" :class="targetType === t.id ? 'text-indigo-600' : 'text-slate-400'" />
+              <component :is="t.i" class="w-5 h-5" :class="targetType === t.id ? 'text-blue-600' : 'text-slate-400'" />
               <span class="font-semibold text-xs text-center">{{ t.n }}</span>
             </button>
           </div>
@@ -218,10 +189,15 @@ onMounted(fetchData);
         <!-- STEP 2 -->
         <div class="space-y-3">
           <label class="text-sm font-semibold text-slate-700 block">2. Pilih Periode yang Ingin Dihapus</label>
-          <div v-if="availableDates.length > 0">
+          <div v-if="isLoading" class="animate-pulse">
+            <div class="h-12 bg-slate-50 rounded-lg w-full border border-slate-200/50 flex items-center px-4">
+              <div class="h-4 bg-slate-200 rounded w-1/3"></div>
+            </div>
+          </div>
+          <div v-else-if="availableDates.length > 0">
             <div class="relative">
               <Calendar class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-              <select v-model="selectedDateToDelete" class="w-full border border-slate-200 pl-10 p-3 rounded-lg bg-slate-50 font-medium text-sm text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all appearance-none cursor-pointer">
+              <select v-model="selectedDateToDelete" class="w-full border border-slate-200 pl-10 p-3 rounded-lg bg-slate-50 font-medium text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all appearance-none cursor-pointer">
                 <option value="" disabled>-- Pilih Tanggal / Bulan --</option>
                 <option v-for="date in availableDates" :key="date" :value="date">{{ date }}</option>
               </select>

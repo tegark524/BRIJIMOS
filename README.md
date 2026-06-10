@@ -1,5 +1,25 @@
-# Vue 3 + Vite
+# BRIJIMOS (BRI Jemursari Monitoring System)
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Sistem Dashboard Data Analyst untuk memantau, menganalisis, dan mengelola portofolio Dana RMFT, Kinerja Unit Kerja, Keragaan Cabang, Target RKA, dan Achievement RMFT secara real-time yang terintegrasi dengan Google Sheets sebagai Database.
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## 📄 Dokumentasi Lengkap
+
+Untuk penjelasan alur penggunaan, dokumentasi fungsi sistem, struktur database spreadsheet, dan informasi konfigurasi deployment, silakan buka file:
+
+👉 **[DOCUMENTATION.md](file:///d:/Tugas%20Tegar/UPN/magang/BRIJIMON/data-analyst-web/DOCUMENTATION.md)**
+
+## 🚀 Quick Start (Development)
+
+1. Pastikan Anda memiliki URL API Google Apps Script terpasang di file `.env`.
+2. Install dependensi:
+   ```bash
+   npm install
+   ```
+3. Jalankan server lokal:
+   ```bash
+   npm run dev
+   ```
+4. Build untuk production:
+   ```bash
+   npm run build
+   ```
