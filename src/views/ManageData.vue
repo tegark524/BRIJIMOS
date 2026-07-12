@@ -15,9 +15,11 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
-  X
+  X,
+  Star
 } from 'lucide-vue-next';
 import { store, fetchData as storeFetchData, clearCache } from '../store';
+import CustomSelect from '../components/CustomSelect.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -42,7 +44,8 @@ const categories = [
   {id:'keragaan', n:'Keragaan', i: Activity},
   {id:'rka', n:'RKA', i: FileText},
   {id:'pipeline', n:'Pipeline', i: TrendingUp},
-  {id:'rmft_ach', n:'RMFT', i: Target}
+  {id:'rmft_ach', n:'RMFT', i: Target},
+  {id:'nasabah', n:'Nasabah Pareto', i: Star}
 ];
 
 // State untuk Custom Toast Notification
@@ -128,6 +131,67 @@ const deleteData = async () => {
   }
 };
 
+const deleteSingleRow = async (key, value, label) => {
+  if (!confirm(`Apakah Anda yakin ingin menghapus "${label}" secara permanen?`)) return;
+
+  isProcessing.value = true;
+  try {
+    const payload = {
+      action: 'delete',
+      type: targetType.value,
+      deleteKey: key,
+      deleteValue: value
+    };
+
+    const response = await fetch(apiUrl, { method: 'POST', body: JSON.stringify(payload) });
+    const res = await response.json();
+
+    if (res.status === 'success') {
+      showToast(`Berhasil! Data "${label}" telah dihapus dari database.`, 'success');
+      clearCache();
+      await fetchData(true); // reload store data
+    } else {
+      showToast('Gagal: ' + res.message, 'error');
+    }
+  } catch (error) {
+    showToast('Koneksi Error: ' + error.message, 'error');
+  } finally {
+    isProcessing.value = false;
+  }
+};
+
+const clearAllCategoryData = async () => {
+  const confirmFirst = confirm(`⚠️ PERINGATAN KERAS!\n\nAnda akan menghapus SELURUH data pada kategori "${targetType.value.toUpperCase()}" secara permanen.\n\nApakah Anda yakin?`);
+  if (!confirmFirst) return;
+
+  const confirmSecond = confirm(`APAKAH ANDA BENAR-BENAR YAKIN?\nTindakan ini akan mengosongkan seluruh isi tabel di Google Sheets.\n\nKlik OK jika Anda yakin.`);
+  if (!confirmSecond) return;
+
+  isProcessing.value = true;
+  try {
+    const payload = {
+      action: 'delete',
+      type: targetType.value === 'unit' ? 'uker' : targetType.value,
+      deleteAll: true
+    };
+
+    const response = await fetch(apiUrl, { method: 'POST', body: JSON.stringify(payload) });
+    const res = await response.json();
+
+    if (res.status === 'success') {
+      showToast(`Berhasil! Seluruh data ${targetType.value.toUpperCase()} telah dikosongkan.`, 'success');
+      clearCache();
+      await fetchData(true); // reload store data
+    } else {
+      showToast('Gagal: ' + res.message, 'error');
+    }
+  } catch (error) {
+    showToast('Koneksi Error: ' + error.message, 'error');
+  } finally {
+    isProcessing.value = false;
+  }
+};
+
 onMounted(fetchData);
 </script>
 
@@ -163,14 +227,15 @@ onMounted(fetchData);
           
           <!-- Mobile Dropdown -->
           <div class="block md:hidden relative">
-            <select v-model="targetType" :disabled="isLoading" class="w-full border border-slate-200 p-3 rounded-xl bg-slate-50 font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all appearance-none cursor-pointer shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
-              <option v-for="t in categories" :key="t.id" :value="t.id">{{ t.n }}</option>
-            </select>
-            <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▼</div>
+            <CustomSelect 
+              v-model="targetType" 
+              :options="categories.map(t => ({ label: t.n, value: t.id }))" 
+              :disabled="isLoading" 
+            />
           </div>
 
           <!-- Desktop Grid -->
-          <div class="hidden md:grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div class="hidden md:grid grid-cols-3 lg:grid-cols-4 gap-2">
             <button v-for="t in categories" 
               :key="t.id" @click="targetType = t.id"
               :disabled="isLoading"
@@ -178,16 +243,16 @@ onMounted(fetchData);
                 targetType === t.id ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50',
                 isLoading ? 'opacity-60 cursor-not-allowed' : ''
               ]"
-              class="p-3 flex flex-col items-center justify-center gap-2 rounded-xl border transition-all active:scale-[0.98]"
+              class="p-4 flex flex-col items-center justify-center gap-2.5 rounded-xl border transition-all active:scale-[0.98]"
             >
               <component :is="t.i" class="w-5 h-5" :class="targetType === t.id ? 'text-blue-600' : 'text-slate-400'" />
-              <span class="font-semibold text-xs text-center">{{ t.n }}</span>
+              <span class="font-semibold text-xs text-center leading-tight">{{ t.n }}</span>
             </button>
           </div>
         </div>
 
-        <!-- STEP 2 -->
-        <div class="space-y-3">
+        <!-- STEP 2 (Untuk data periodik) -->
+        <div v-if="targetType !== 'nasabah'" class="space-y-3">
           <label class="text-sm font-semibold text-slate-700 block">2. Pilih Periode yang Ingin Dihapus</label>
           <div v-if="isLoading" class="animate-pulse">
             <div class="h-12 bg-slate-50 rounded-lg w-full border border-slate-200/50 flex items-center px-4">
@@ -196,17 +261,77 @@ onMounted(fetchData);
           </div>
           <div v-else-if="availableDates.length > 0">
             <div class="relative">
-              <Calendar class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-              <select v-model="selectedDateToDelete" class="w-full border border-slate-200 pl-10 p-3 rounded-lg bg-slate-50 font-medium text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all appearance-none cursor-pointer">
-                <option value="" disabled>-- Pilih Tanggal / Bulan --</option>
-                <option v-for="date in availableDates" :key="date" :value="date">{{ date }}</option>
-              </select>
-              <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▼</div>
+              <Calendar class="absolute left-3 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 pointer-events-none z-10" />
+              <CustomSelect 
+                v-model="selectedDateToDelete" 
+                :options="availableDates" 
+                placeholder="-- Pilih Tanggal / Bulan --"
+                class="pl-10"
+              />
             </div>
           </div>
           <div v-else class="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
             <SearchX class="w-10 h-10 mx-auto text-slate-400 mb-3" />
             <p class="text-slate-500 font-medium text-sm">Tidak ada riwayat data pada kategori ini.</p>
+          </div>
+        </div>
+
+        <!-- STEP 2 (Untuk data statis Nasabah Pareto) -->
+        <div v-else class="space-y-3">
+          <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-1">
+            <label class="text-sm font-bold text-slate-700">2. Kelola Data Nasabah Pareto (Hapus Per Baris)</label>
+            <button
+              @click="clearAllCategoryData"
+              :disabled="isProcessing"
+              class="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 border border-rose-100 rounded-lg text-[10px] font-black text-rose-600 hover:bg-rose-100 hover:text-rose-700 active:scale-95 transition-all w-fit disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 class="w-3.5 h-3.5" /> Kosongkan Semua Data
+            </button>
+          </div>
+          
+          <div v-if="isLoading" class="animate-pulse space-y-2">
+            <div v-for="i in 3" :key="i" class="h-12 bg-slate-50 rounded-xl w-full border border-slate-200/50" />
+          </div>
+          
+          <div v-else-if="rawData.nasabah && rawData.nasabah.length > 0" class="overflow-hidden border border-slate-200 rounded-xl">
+            <div class="max-h-96 overflow-y-auto">
+              <table class="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                    <th class="p-3 w-10 text-center">No</th>
+                    <th class="p-3">Nama Nasabah</th>
+                    <th class="p-3">Jenis Usaha</th>
+                    <th class="p-3 text-right">Volume</th>
+                    <th class="p-3 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 bg-white">
+                  <tr v-for="(row, idx) in rawData.nasabah" :key="idx" class="hover:bg-slate-50/80 transition-colors">
+                    <td class="p-3 text-center text-slate-400">{{ idx + 1 }}</td>
+                    <td class="p-3 font-semibold text-slate-800">{{ row.Nama_Nasabah || row['Nama Nasabah'] || '-' }}</td>
+                    <td class="p-3 text-slate-600">{{ row.Jenis_Usaha || row['Jenis Usaha'] || '-' }}</td>
+                    <td class="p-3 text-right font-semibold text-slate-700 tabular-nums">
+                      {{ (Number(row.Volume) || 0).toLocaleString('id-ID') }}
+                    </td>
+                    <td class="p-3 text-center">
+                      <button
+                        @click="deleteSingleRow('Nama_Nasabah', row.Nama_Nasabah || row['Nama Nasabah'], row.Nama_Nasabah || row['Nama Nasabah'])"
+                        :disabled="isProcessing"
+                        class="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all active:scale-95 disabled:opacity-50"
+                        title="Hapus Nasabah"
+                      >
+                        <Trash2 class="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div v-else class="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
+            <SearchX class="w-10 h-10 mx-auto text-slate-400 mb-3" />
+            <p class="text-slate-500 font-medium text-sm">Tidak ada data Nasabah Pareto di database.</p>
           </div>
         </div>
 

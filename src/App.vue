@@ -47,25 +47,47 @@
           </button>
           
           <div v-show="openMenus.dashboard" class="mt-1 mb-2 ml-4 pl-4 border-l border-slate-200 space-y-1">
-            <router-link to="/?tab=pegawai" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/?tab=pegawai" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/' && (route.query.tab === 'pegawai' || !route.query.tab) ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <Users class="w-4 h-4" />
               <span>Dana RMFT</span>
             </router-link>
-            <router-link to="/?tab=unit" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/?tab=unit" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/' && route.query.tab === 'unit' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <Building2 class="w-4 h-4" />
               <span>Unit Kerja</span>
             </router-link>
-            <router-link to="/?tab=keragaan" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/?tab=keragaan" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/' && route.query.tab === 'keragaan' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <Activity class="w-4 h-4" />
               <span>Keragaan</span>
             </router-link>
-            <router-link to="/?tab=pipeline" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/?tab=pipeline" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/' && route.query.tab === 'pipeline' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <TrendingUp class="w-4 h-4" />
               <span>Pipeline</span>
             </router-link>
-            <router-link to="/?tab=rmft_ach" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/?tab=rmft_ach" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/' && route.query.tab === 'rmft_ach' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <Target class="w-4 h-4" />
               <span>Achievement RMFT</span>
+            </router-link>
+            <router-link to="/nasabah" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/nasabah' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
+              <Star class="w-4 h-4" />
+              <span>Nasabah Pareto</span>
             </router-link>
           </div>
         </div>
@@ -82,29 +104,54 @@
           </button>
           
           <div v-show="openMenus.input" class="mt-1 mb-2 ml-4 pl-4 border-l border-slate-200 space-y-1">
-            <router-link to="/input?type=pegawai" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/input?type=pegawai" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/input' && (route.query.type === 'pegawai' || !route.query.type) ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <Users class="w-4 h-4" />
               <span>Dana RMFT</span>
             </router-link>
-            <router-link to="/input?type=uker" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/input?type=uker" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/input' && route.query.type === 'uker' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <Building2 class="w-4 h-4" />
               <span>Unit Kerja</span>
             </router-link>
-            <router-link to="/input?type=keragaan" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/input?type=keragaan" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/input' && route.query.type === 'keragaan' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <Activity class="w-4 h-4" />
               <span>Keragaan</span>
             </router-link>
-            <router-link to="/input?type=rka" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/input?type=rka" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/input' && route.query.type === 'rka' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <FileText class="w-4 h-4" />
               <span>RKA</span>
             </router-link>
-            <router-link to="/input?type=pipeline" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/input?type=pipeline" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/input' && route.query.type === 'pipeline' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <TrendingUp class="w-4 h-4" />
               <span>Pipeline</span>
             </router-link>
-            <router-link to="/input?type=rmft_ach" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/input?type=rmft_ach" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/input' && route.query.type === 'rmft_ach' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <Target class="w-4 h-4" />
               <span>Achievement RMFT</span>
+            </router-link>
+            <router-link to="/input?type=nasabah" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/input' && route.query.type === 'nasabah' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
+              <Star class="w-4 h-4" />
+              <span>Nasabah Pareto</span>
             </router-link>
           </div>
         </div>
@@ -121,29 +168,54 @@
           </button>
           
           <div v-show="openMenus.management" class="mt-1 mb-2 ml-4 pl-4 border-l border-slate-200 space-y-1">
-            <router-link to="/manage?type=pegawai" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/manage?type=pegawai" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/manage' && (route.query.type === 'pegawai' || !route.query.type) ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <Users class="w-4 h-4" />
               <span>Dana RMFT</span>
             </router-link>
-            <router-link to="/manage?type=unit" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/manage?type=unit" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/manage' && route.query.type === 'unit' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <Building2 class="w-4 h-4" />
               <span>Unit Kerja</span>
             </router-link>
-            <router-link to="/manage?type=keragaan" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/manage?type=keragaan" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/manage' && route.query.type === 'keragaan' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <Activity class="w-4 h-4" />
               <span>Keragaan</span>
             </router-link>
-            <router-link to="/manage?type=rka" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/manage?type=rka" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/manage' && route.query.type === 'rka' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <FileText class="w-4 h-4" />
               <span>RKA</span>
             </router-link>
-            <router-link to="/manage?type=pipeline" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/manage?type=pipeline" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/manage' && route.query.type === 'pipeline' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <TrendingUp class="w-4 h-4" />
               <span>Pipeline</span>
             </router-link>
-            <router-link to="/manage?type=rmft_ach" @click="isSidebarOpen = false" class="flex items-center space-x-3 p-2.5 text-slate-500 hover:bg-slate-50 hover:text-blue-600 rounded-lg transition-colors text-sm font-medium" active-class="bg-blue-50 text-blue-600 font-semibold">
+            <router-link to="/manage?type=rmft_ach" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/manage' && route.query.type === 'rmft_ach' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
               <Target class="w-4 h-4" />
               <span>Achievement RMFT</span>
+            </router-link>
+            <router-link to="/manage?type=nasabah" @click="isSidebarOpen = false" 
+              class="flex items-center space-x-3 p-2.5 rounded-lg transition-colors text-sm font-medium"
+              :class="route.path === '/manage' && route.query.type === 'nasabah' ? 'bg-blue-50 text-blue-600 font-semibold' : 'text-slate-500 hover:bg-slate-50 hover:text-blue-600'"
+            >
+              <Star class="w-4 h-4" />
+              <span>Nasabah Pareto</span>
             </router-link>
           </div>
         </div>
@@ -186,6 +258,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import { useRoute } from 'vue-router';
 import { 
   LayoutDashboard, 
   Database, 
@@ -200,10 +273,12 @@ import {
   ChevronDown,
   ChevronRight,
   Settings,
-  FileText
+  FileText,
+  Star
 } from 'lucide-vue-next';
 
 const isSidebarOpen = ref(false);
+const route = useRoute();
 
 // State untuk dropdown menu
 const openMenus = ref({

@@ -1,8 +1,9 @@
 <script setup>
 import { onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Users, Building2, Activity, TrendingUp, Target, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, RefreshCw } from 'lucide-vue-next';
+import { Users, Building2, Activity, TrendingUp, Target, Search, Calendar, ArrowUp, ArrowDown, ArrowUpDown, RefreshCw, Star } from 'lucide-vue-next';
 import { store, fetchData as storeFetchData } from '../store';
+import CustomSelect from '../components/CustomSelect.vue';
 
 // --- STATE / VARIABEL UTAMA ---
 const route = useRoute();
@@ -73,10 +74,15 @@ watch(() => route.query.tab, (newTab) => {
 });
 
 watch(activeTab, (newVal) => {
-  if (route.query.tab !== newVal) {
+  if (newVal === 'nasabah') {
+    router.push('/nasabah');
+    // Kembalikan tab terpilih ke nilai lama agar tidak tertahan di 'nasabah' saat back/kembali
+    activeTab.value = route.query.tab || 'pegawai';
+  } else if (route.query.tab !== newVal) {
     router.replace({ query: { ...route.query, tab: newVal } });
   }
 });
+
 
 const menuTabs = [
   { id: 'pegawai', l: 'Dana RMFT', icon: Users },
@@ -665,10 +671,10 @@ onMounted(fetchData);
       
       <!-- Mobile Dropdown Tabs -->
       <div class="block lg:hidden w-full relative">
-        <select v-model="activeTab" class="w-full border border-slate-200 p-3.5 rounded-xl bg-white font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none cursor-pointer shadow-sm">
-          <option v-for="t in menuTabs" :key="t.id" :value="t.id">{{ t.l }}</option>
-        </select>
-        <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▼</div>
+        <CustomSelect 
+          v-model="activeTab" 
+          :options="[...menuTabs.map(t => ({ label: t.l, value: t.id })), { label: '⭐ Nasabah Pareto', value: 'nasabah' }]" 
+        />
       </div>
 
       <!-- Desktop Tabs -->
@@ -681,6 +687,15 @@ onMounted(fetchData);
           <component :is="t.icon" class="w-4 h-4 mr-2" :class="activeTab === t.id ? 'text-blue-600' : 'text-slate-400'" />
           {{ t.l }}
         </button>
+        
+        <!-- Tab Nasabah Pareto (Menuju Laman Nasabah) -->
+        <router-link
+          to="/nasabah"
+          class="flex items-center px-4 py-2 rounded-lg transition-all text-sm text-slate-500 hover:text-slate-800 hover:bg-slate-50 border border-transparent whitespace-nowrap"
+        >
+          <Star class="w-4.5 h-4.5 mr-2 text-slate-400" />
+          Nasabah Pareto
+        </router-link>
       </div>
 
       <div class="flex items-center space-x-4 bg-white p-3 px-5 rounded-2xl border shadow-sm border-slate-200 w-full lg:w-auto justify-between lg:justify-start">
@@ -797,15 +812,17 @@ onMounted(fetchData);
             <div class="space-y-3">
               <div>
                 <span class="text-xs font-medium text-slate-500 mb-1 block">Pilih Baseline</span>
-                <select v-model="selectedBaseline" class="w-full border border-slate-200 p-2.5 rounded-lg text-sm bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-blue-500/20">
-                  <option v-for="d in [...new Set(rawData.pegawai.map(i => formatToLocalWIB(i.Tanggal_Data)))].sort()" :key="d">{{d}}</option>
-                </select>
+                <CustomSelect
+                  v-model="selectedBaseline"
+                  :options="[...new Set(rawData.pegawai.map(i => formatToLocalWIB(i.Tanggal_Data)))].sort()"
+                />
               </div>
               <div>
                 <span class="text-xs font-medium text-slate-500 mb-1 block">Pilih Latest</span>
-                <select v-model="selectedLatest" class="w-full border border-slate-200 p-2.5 rounded-lg text-sm bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-blue-500/20">
-                  <option v-for="d in [...new Set(rawData.pegawai.map(i => formatToLocalWIB(i.Tanggal_Data)))].sort()" :key="d">{{d}}</option>
-                </select>
+                <CustomSelect
+                  v-model="selectedLatest"
+                  :options="[...new Set(rawData.pegawai.map(i => formatToLocalWIB(i.Tanggal_Data)))].sort()"
+                />
               </div>
             </div>
           </div>
@@ -902,15 +919,17 @@ onMounted(fetchData);
             <div class="space-y-4 mt-4">
               <div>
                 <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Pilih Baseline</label>
-                <select v-model="selectedBaselineUnit" class="w-full border border-slate-200 p-2.5 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all cursor-pointer">
-                  <option v-for="d in [...new Set(rawData.unit.map(i => formatToLocalWIB(i.Tanggal_Data)))].sort()" :key="d" :value="d">{{d}}</option>
-                </select>
+                <CustomSelect
+                  v-model="selectedBaselineUnit"
+                  :options="[...new Set(rawData.unit.map(i => formatToLocalWIB(i.Tanggal_Data)))].sort()"
+                />
               </div>
               <div>
                 <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Pilih Latest</label>
-                <select v-model="selectedDateUnit" class="w-full border border-slate-200 p-2.5 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all cursor-pointer">
-                  <option v-for="d in [...new Set(rawData.unit.map(i => formatToLocalWIB(i.Tanggal_Data)))].sort().reverse()" :key="d" :value="d">{{d}}</option>
-                </select>
+                <CustomSelect
+                  v-model="selectedDateUnit"
+                  :options="[...new Set(rawData.unit.map(i => formatToLocalWIB(i.Tanggal_Data)))].sort().reverse()"
+                />
               </div>
             </div>
           </div>
@@ -1012,9 +1031,10 @@ onMounted(fetchData);
              </div>
              <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-center text-center">
                 <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4">Pilih Hari Tinjauan</label>
-                <select v-model="selectedDateUnit" class="w-full border border-slate-200 p-4 rounded-xl bg-slate-50 font-semibold text-lg text-slate-700 outline-none focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition-all text-center cursor-pointer">
-                  <option v-for="d in [...new Set(rawData.keragaan.map(i => formatToLocalWIB(i.Tanggal_Data)))].sort().reverse()" :key="d" :value="d">{{d}}</option>
-                </select>
+                <CustomSelect
+                  v-model="selectedDateUnit"
+                  :options="[...new Set(rawData.keragaan.map(i => formatToLocalWIB(i.Tanggal_Data)))].sort().reverse()"
+                />
              </div>
           </div>
 
@@ -1101,11 +1121,12 @@ onMounted(fetchData);
             
             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider text-center mt-2">Filter Bulan Target</label>
             <div class="relative">
-              <Calendar class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <select v-model="pipelineSelectedMonth" class="w-full border border-slate-200 pl-10 p-2.5 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all cursor-pointer">
-                <option value="">Semua Bulan</option>
-                <option v-for="m in pipelineMonths" :key="m" :value="m">{{ m }}</option>
-              </select>
+              <Calendar class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none" />
+              <CustomSelect
+                v-model="pipelineSelectedMonth"
+                :options="[{ label: 'Semua Bulan', value: '' }, ...pipelineMonths]"
+                class="pl-10"
+              />
             </div>
           </div>
         </div>
@@ -1187,9 +1208,10 @@ onMounted(fetchData);
           <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
             <div class="flex flex-col gap-2">
               <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Filter Bulan</label>
-              <select v-model="selectedMonthRmft" class="w-full border border-slate-200 p-2.5 rounded-lg bg-slate-50 text-sm focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all cursor-pointer">
-                <option v-for="m in achievementMonths" :key="m" :value="m">{{ m }}</option>
-              </select>
+              <CustomSelect
+                v-model="selectedMonthRmft"
+                :options="achievementMonths"
+              />
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 mt-4">Pencarian RMFT</label>

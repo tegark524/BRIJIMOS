@@ -5,7 +5,8 @@ unit: "Data_Unit",
 keragaan: "Keragaan_Cabang",
 rka: "RKA_Data",
 pipeline: "Pipeline_Data",
-rmft_ach: "Pencapaian_RMFT"
+rmft_ach: "Pencapaian_RMFT",
+nasabah: "Nasabah_Prioritas"
 };
 
 function doGet(e) {
@@ -36,7 +37,8 @@ unit: getSheetData(SHEET_MAP.unit),
 keragaan: getSheetData(SHEET_MAP.keragaan),
 rka: getSheetData(SHEET_MAP.rka),
 pipeline: getSheetData(SHEET_MAP.pipeline),
-rmft_ach: getSheetData(SHEET_MAP.rmft_ach)
+rmft_ach: getSheetData(SHEET_MAP.rmft_ach),
+nasabah: getSheetData(SHEET_MAP.nasabah)
 })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -52,9 +54,41 @@ if (!sheet) throw new Error("Sheet tidak ditemukan!");
 
     // --- LOGIKA HAPUS ---
     if (action === 'delete') {
-      const targetDate = body.targetDate.toString().trim();
       const data = sheet.getDataRange().getDisplayValues();
       const headers = data[0];
+      
+      // JIKA HAPUS SEMUA DATA (KOSONGKAN SHEET)
+      if (body.deleteAll === true) {
+        if (sheet.getLastRow() > 1) {
+          sheet.deleteRows(2, sheet.getLastRow() - 1);
+        }
+        return response({ status: "success", message: "Semua data berhasil dikosongkan" });
+      }
+
+      // JIKA HAPUS BY KEY-VALUE (untuk data statis tanpa kolom Tanggal, misal Nasabah Pareto)
+      if (body.deleteKey && body.deleteValue !== undefined) {
+        const key = body.deleteKey;
+        const val = body.deleteValue.toString().trim().toLowerCase();
+        // Cari kolom yang namanya cocok (mengabaikan case & underscore/spasi)
+        const colIdx = headers.findIndex(h => {
+          const cleanH = h.toLowerCase().replace(/_/g, "").replace(/\s/g, "");
+          const cleanK = key.toLowerCase().replace(/_/g, "").replace(/\s/g, "");
+          return cleanH === cleanK;
+        });
+        if (colIdx === -1) throw new Error("Kolom key '" + key + "' tidak ditemukan!");
+        
+        let deletedCount = 0;
+        for (let i = data.length - 1; i >= 1; i--) {
+          if (data[i][colIdx].toString().trim().toLowerCase() === val) {
+            sheet.deleteRow(i + 1);
+            deletedCount++;
+          }
+        }
+        return response({ status: "success", message: deletedCount + " baris berhasil dihapus" });
+      }
+
+      // JIKA HAPUS BY DATE (Untuk data periodik)
+      const targetDate = body.targetDate.toString().trim();
       const dateColIdx = headers.findIndex(h => h.toLowerCase().includes("tanggal") || h.toLowerCase().includes("bulan"));
       let deletedCount = 0;
       for (let i = data.length - 1; i >= 1; i--) {

@@ -61,3 +61,13 @@ Berisi detail pencapaian kinerja (KPI) dari RMFT berdasarkan berbagai parameter.
 - **PROG_SGF** : Pencapaian program SGF.
 - **TOTAL** : Total skor atau nilai pencapaian keseluruhan.
 - **Kolom Tambahan/handle Jika pakai format lain** : `posisi_tab`, `casa_me`, `sv_edc`, `user_activ_b`, `user_activ_qlola`, `ph_program` (Parameter teknis pendukung perhitungan kinerja).
+
+## 7. Tabel: Nasabah_Prioritas
+
+Berisi data profil nasabah prioritas BRI beserta jenis usaha dan volume tabungan.
+
+- **Nama_Nasabah** : Nama lengkap nasabah atau perusahaan.
+- **Jenis_Usaha** : Bidang usaha nasabah (misal: Developer, Sawit, Koran).
+- **Omset** : Total omset usaha nasabah (angka, tanpa titik/koma).
+- **Produk_BRI** : Produk BRI yang digunakan (misal: TAB, GIRO, DEP).
+- **Volume** : Volume/jumlah tabungan nasabah (angka bulat).

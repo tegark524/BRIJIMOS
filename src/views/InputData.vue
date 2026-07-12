@@ -2,6 +2,7 @@
 import { ref, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { clearCache } from '../store';
+import CustomSelect from '../components/CustomSelect.vue';
 import {
   Users,
   Building2,
@@ -31,6 +32,98 @@ const rawPaste = ref('');
 const parsedData = ref([]);
 const tanggalInput = ref(new Date().toISOString().split('T')[0]);
 const isSaving = ref(false);
+const inputMode = ref('paste'); // 'paste' | 'manual'
+const manualForm = ref({
+  pn: '', nama: '', giro: '', tab: '', depo: '',
+  unit: '', ukerNama: '', ukerNilai: '',
+  produk: 'TOTAL DANA', nilai: '',
+  pipelineRMFT: '', pipelineNasabah: '', pipelineNominal: '', pipelineReal: '', pipelineJenis: 'Giro', pipelineDate: '',
+  achRMFT: '', achAvgTab: '', achPosTab: '', achAvgGiro: '', achAvgDpk: '', achTotal: '',
+  nasabahNama: '', nasabahUsaha: '', nasabahOmset: '', nasabahProduk: 'TAB', nasabahVolume: '', nasabahPersen: ''
+});
+
+const resetManualForm = () => {
+  manualForm.value = {
+    pn: '', nama: '', giro: '', tab: '', depo: '',
+    unit: '', ukerNama: '', ukerNilai: '',
+    produk: 'TOTAL DANA', nilai: '',
+    pipelineRMFT: '', pipelineNasabah: '', pipelineNominal: '', pipelineReal: '', pipelineJenis: 'Giro', pipelineDate: tanggalInput.value,
+    achRMFT: '', achAvgTab: '', achPosTab: '', achAvgGiro: '', achAvgDpk: '', achTotal: '',
+    nasabahNama: '', nasabahUsaha: '', nasabahOmset: '', nasabahProduk: 'TAB', nasabahVolume: '', nasabahPersen: ''
+  };
+};
+
+const addManualRow = () => {
+  let row = {};
+  if (inputType.value === 'pegawai') {
+    if (!manualForm.value.pn || !manualForm.value.nama) return alert('Nama dan PN wajib diisi!');
+    row = {
+      pn: manualForm.value.pn,
+      nama: manualForm.value.nama,
+      giro: Number(manualForm.value.giro) || 0,
+      tab: Number(manualForm.value.tab) || 0,
+      depo: Number(manualForm.value.depo) || 0,
+      tanggal: tanggalInput.value
+    };
+  } else if (inputType.value === 'uker') {
+    if (!manualForm.value.unit) return alert('Kode Unit wajib diisi!');
+    row = {
+      unit: manualForm.value.unit,
+      nama: manualForm.value.ukerNama || 'Unit Kerja',
+      produk: selectedProduct.value,
+      nilai: Number(manualForm.value.ukerNilai) || 0,
+      tanggal: tanggalInput.value
+    };
+  } else if (inputType.value === 'keragaan' || inputType.value === 'rka') {
+    row = {
+      produk: manualForm.value.produk,
+      nilai: Number(manualForm.value.nilai) || 0,
+      tanggal: tanggalInput.value,
+      bulan: tanggalInput.value.substring(0, 7)
+    };
+  } else if (inputType.value === 'pipeline') {
+    if (!manualForm.value.pipelineRMFT || !manualForm.value.pipelineNasabah) return alert('Nama RMFT dan Nasabah wajib diisi!');
+    row = {
+      NAMA_RMFT: manualForm.value.pipelineRMFT,
+      NAMA_NASABAH: manualForm.value.pipelineNasabah,
+      PIPELINE: Number(manualForm.value.pipelineNominal) || 0,
+      KETERANGAN: manualForm.value.pipelineJenis,
+      NOMINAL: Number(manualForm.value.pipelineReal) || 0,
+      TANGGAL: manualForm.value.pipelineDate || tanggalInput.value
+    };
+  } else if (inputType.value === 'rmft_ach') {
+    if (!manualForm.value.achRMFT) return alert('Nama RMFT wajib diisi!');
+    row = {
+      NAMA_RMFT: manualForm.value.achRMFT,
+      AVG_TAB: Number(manualForm.value.achAvgTab) || 0,
+      posisi_tab: Number(manualForm.value.achPosTab) || 0,
+      AVG_GIRO: Number(manualForm.value.achAvgGiro) || 0,
+      AVG_DPK: Number(manualForm.value.achAvgDpk) || 0,
+      TOTAL: Number(manualForm.value.achTotal) || 0,
+      BULAN: tanggalInput.value.substring(0, 7),
+      TANGGAL: tanggalInput.value
+    };
+  } else if (inputType.value === 'nasabah') {
+    if (!manualForm.value.nasabahNama) return alert('Nama Nasabah wajib diisi!');
+    const vol = Number(manualForm.value.nasabahVolume) || 0;
+    const defaultPct = vol / 1000;
+    const pct = manualForm.value.nasabahPersen !== null && manualForm.value.nasabahPersen !== ''
+      ? Number(manualForm.value.nasabahPersen)
+      : defaultPct;
+    row = {
+      Nama_Nasabah: manualForm.value.nasabahNama,
+      Jenis_Usaha: manualForm.value.nasabahUsaha || '',
+      Omset: Number(manualForm.value.nasabahOmset) || 0,
+      Produk_BRI: manualForm.value.nasabahProduk.toUpperCase(),
+      Volume: vol,
+      Presentase: pct
+    };
+  }
+
+  parsedData.value.push(row);
+  resetManualForm();
+};
+
 
 // --- DATA CONTOH & STRUKTUR STATIC ---
 const rmftAchFormat = ref('terbaru'); // 'terbaru' | 'dasar'
@@ -78,6 +171,14 @@ DEP	15.000.000.000`,
 Siti Aminah	PT Sukses Abadi	250.000.000	10/06/2026	Tabungan	200.000.000
 Andi Wijaya	UD Makmur	50.000.000	11/06/2026	Deposito	50.000.000`,
     desc: 'Sistem mendeteksi format secara dinamis dengan melacak kolom tanggal. Bisa menggunakan format Tanggal di kolom 3 atau 4.'
+  },
+  nasabah: {
+    title: 'Nasabah Pareto',
+    columns: ['Nama Nasabah', 'Jenis Usaha', 'Omset', 'Produk BRI', 'Volume', 'Presentase'],
+    raw: `Jawa Pos	Koran	100000000000	TAB	65000	65%
+Lunic	Sawit	100000000000	TAB	43000	43%
+Ladang	E Commerce	100000000000	TAB	50000	50%`,
+    desc: 'Paste data nasabah prioritas. Kolom: Nama Nasabah | Jenis Usaha | Omset (angka) | Produk BRI | Volume (angka) | Presentase (%, angka/persen). Data ini bersifat STATIS (tidak ada kolom tanggal).'
   }
 };
 
@@ -113,6 +214,7 @@ const loadSample = () => {
   const sample = activeSample.value;
   if (sample) {
     rawPaste.value = sample.raw;
+    inputMode.value = 'paste';
     handlePaste();
   }
 };
@@ -120,14 +222,36 @@ const loadSample = () => {
 const copySample = async () => {
   const sample = activeSample.value;
   if (sample) {
+    // Auto-fill dan auto-parse langsung ke paste zone (bisa dipakai offline/HTTP)
+    rawPaste.value = sample.raw;
+    inputMode.value = 'paste';
+    handlePaste();
+    
+    // Copy ke clipboard fisik
     try {
-      await navigator.clipboard.writeText(sample.raw);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(sample.raw);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = sample.raw;
+        textArea.style.position = "fixed";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
       isCopied.value = true;
       setTimeout(() => {
         isCopied.value = false;
       }, 2000);
     } catch (err) {
-      alert('Gagal menyalin: ' + err.message);
+      console.warn('Clipboard copy failed: ', err);
+      // Tetap set true karena data sudah terisi otomatis di zone
+      isCopied.value = true;
+      setTimeout(() => {
+        isCopied.value = false;
+      }, 2000);
     }
   }
 };
@@ -159,6 +283,10 @@ const validationErrors = computed(() => {
       if (!row.NAMA_RMFT || String(row.NAMA_RMFT).trim() === '' || row.NAMA_RMFT === 'Unknown RMFT') {
         errors.push(`Baris ${rowNum}: Nama RMFT tidak valid.`);
       }
+    } else if (inputType.value === 'nasabah') {
+      if (!row.Nama_Nasabah || String(row.Nama_Nasabah).trim() === '') {
+        errors.push(`Baris ${rowNum}: Nama Nasabah kosong.`);
+      }
     }
   });
   return errors;
@@ -184,7 +312,8 @@ const menuTabs = [
   { id: 'keragaan', l: 'Keragaan', icon: BarChart3 },
   { id: 'rka', l: 'RKA', icon: FileText },
   { id: 'pipeline', l: 'Pipeline', icon: TrendingUp },
-  { id: 'rmft_ach', l: 'Achievement RMFT', icon: Target }
+  { id: 'rmft_ach', l: 'Achievement RMFT', icon: Target },
+  { id: 'nasabah', l: 'Nasabah Pareto', icon: Sparkles }
 ];
 
 watch(() => route.query.tab || route.query.type, (newTab) => {
@@ -488,17 +617,29 @@ const handlePaste = () => {
             TANGGAL: tanggalInput.value
           });
         }
+
       } else if (inputType.value === 'keragaan' || inputType.value === 'rka') {
         const inputRowText = text.toUpperCase();
         const foundProd = fixedProducts.find(p => inputRowText.includes(p));
-        
         if (foundProd) {
           const nilaiRaw = cols[cols.length - 1];
-          result.push({ 
-            produk: foundProd, 
-            nilai: cleanNum(nilaiRaw), 
+          result.push({
+            produk: foundProd,
+            nilai: cleanNum(nilaiRaw),
             tanggal: tanggalInput.value,
             bulan: tanggalInput.value.substring(0, 7)
+          });
+        }
+
+      } else if (inputType.value === 'nasabah') {
+        if (cols.length >= 2) {
+          result.push({
+            Nama_Nasabah: cols[0]?.trim() || '',
+            Jenis_Usaha: cols[1]?.trim() || '',
+            Omset: cleanNum(cols[2]),
+            Produk_BRI: (cols[3]?.trim() || 'TAB').toUpperCase(),
+            Volume: cleanNum(cols[4]),
+            Presentase: cols[5] ? cleanNum(cols[5]) : 0
           });
         }
       }
@@ -553,10 +694,10 @@ const saveData = async () => {
 
     <!-- Mobile Dropdown -->
     <div class="block lg:hidden w-full mb-8 relative">
-      <select v-model="inputType" class="w-full border border-slate-200 p-3.5 rounded-xl bg-white font-semibold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 transition-all appearance-none cursor-pointer shadow-sm">
-        <option v-for="m in menuTabs" :key="m.id" :value="m.id">{{ m.l }}</option>
-      </select>
-      <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">▼</div>
+      <CustomSelect 
+        v-model="inputType" 
+        :options="menuTabs.map(m => ({ label: m.l, value: m.id }))" 
+      />
     </div>
 
     <!-- Desktop Tabs -->
@@ -574,31 +715,131 @@ const saveData = async () => {
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
       
       <div class="lg:col-span-4 space-y-8">
-        <div class="bg-white p-8 rounded-[3rem] shadow-2xl border border-slate-100">
+        <div class="bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-100">
+          <!-- Toggle Mode Input -->
+          <div class="flex p-1 bg-slate-100 rounded-2xl gap-1 mb-6 border border-slate-200/50">
+            <button
+              type="button"
+              @click="inputMode = 'paste'"
+              :class="inputMode === 'paste' ? 'bg-white text-blue-700 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'"
+              class="flex-1 py-2.5 rounded-xl text-xs transition-all text-center uppercase tracking-wider font-semibold"
+            >
+              Smart Paste Excel
+            </button>
+            <button
+              type="button"
+              @click="inputMode = 'manual'"
+              :class="inputMode === 'manual' ? 'bg-white text-blue-700 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'"
+              class="flex-1 py-2.5 rounded-xl text-xs transition-all text-center uppercase tracking-wider font-semibold"
+            >
+              Input Form Manual
+            </button>
+          </div>
+
           <div class="space-y-6">
             <div>
-              <label class="flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2"><Calendar class="w-4 h-4" /> Tanggal Data (Wajib Cek)</label>
-              <input type="date" v-model="tanggalInput" @change="handlePaste" class="w-full border-4 border-slate-50 p-4 rounded-3xl bg-slate-50 font-black text-lg focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner" />
-              <p class="mt-2 text-[9px] text-blue-500 font-bold uppercase tracking-widest ml-2 italic">* Pastikan tanggal sesuai data Excel</p>
-            </div>
-            
-            <div v-if="inputType === 'uker'">
-              <label class="flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2"><ListChecks class="w-4 h-4" /> Pilih Produk Unit</label>
-              <select v-model="selectedProduct" @change="handlePaste" class="w-full border-4 border-slate-50 p-4 rounded-3xl bg-slate-50 font-black focus:bg-white focus:border-blue-500 outline-none transition-all shadow-inner">
-                <option value="Giro">Giro</option>
-                <option value="Tabungan">Tabungan</option>
-                <option value="Deposito">Deposito</option>
-              </select>
+              <label class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1"><Calendar class="w-4 h-4" /> Tanggal Data</label>
+              <input type="date" v-model="tanggalInput" @change="handlePaste" class="w-full border border-slate-200 p-3 rounded-2xl bg-slate-50 font-bold text-sm focus:bg-white focus:border-blue-500 outline-none transition-all shadow-sm" />
             </div>
 
-            <div>
-              <label class="flex items-center gap-2 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2"><FilePlus2 class="w-4 h-4" /> Excel Paste Zone</label>
-              <textarea 
-                v-model="rawPaste" 
-                @input="handlePaste"
-                :placeholder="inputType === 'pegawai' ? 'Paste PN - Nama & Saldo...' : 'Copy dari Excel lalu Paste di sini...'" 
-                class="w-full h-96 p-6 border-4 border-slate-50 bg-slate-50 rounded-[2.5rem] focus:bg-white focus:border-blue-500 outline-none font-mono text-xs transition-all leading-relaxed shadow-inner"
-              ></textarea>
+            <!-- SMART PASTE ZONE -->
+            <div v-if="inputMode === 'paste'" class="space-y-5">
+              <div v-if="inputType === 'uker'">
+                <label class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1"><ListChecks class="w-4 h-4" /> Pilih Produk Unit</label>
+                <CustomSelect 
+                  v-model="selectedProduct" 
+                  @change="handlePaste"
+                  :options="['Giro', 'Tabungan', 'Deposito']" 
+                />
+              </div>
+
+              <div>
+                <label class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1"><FilePlus2 class="w-4 h-4" /> Excel Paste Zone</label>
+                <textarea 
+                  v-model="rawPaste" 
+                  @input="handlePaste"
+                  :placeholder="inputType === 'pegawai' ? 'Paste PN - Nama & Saldo...' : 'Copy dari Excel lalu Paste di sini...'" 
+                  class="w-full h-80 p-4 border border-slate-200 bg-slate-50 rounded-2xl focus:bg-white focus:border-blue-500 outline-none font-mono text-xs transition-all leading-relaxed shadow-inner"
+                ></textarea>
+              </div>
+            </div>
+
+            <!-- MANUAL ENTRY FORM ZONE -->
+            <div v-else class="space-y-4">
+              
+              <!-- Form Pegawai -->
+              <div v-if="inputType === 'pegawai'" class="space-y-3">
+                <input v-model="manualForm.pn" placeholder="PN Pegawai (misal: 9012345)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input v-model="manualForm.nama" placeholder="Nama Lengkap Pegawai" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input type="number" v-model="manualForm.giro" placeholder="Saldo Giro (Rp)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input type="number" v-model="manualForm.tab" placeholder="Saldo Tabungan (Rp)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input type="number" v-model="manualForm.depo" placeholder="Saldo Deposito (Rp)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+              </div>
+
+              <!-- Form Uker -->
+              <div v-if="inputType === 'uker'" class="space-y-3">
+                <CustomSelect
+                  v-model="selectedProduct"
+                  :options="['Giro', 'Tabungan', 'Deposito']"
+                />
+                <input v-model="manualForm.unit" placeholder="Kode Unit Kerja (misal: 0123)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input v-model="manualForm.ukerNama" placeholder="Nama Unit Kerja (misal: KC Central)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input type="number" v-model="manualForm.ukerNilai" placeholder="Nilai Saldo (Rp)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+              </div>
+
+              <!-- Form Keragaan & RKA -->
+              <div v-if="inputType === 'keragaan' || inputType === 'rka'" class="space-y-3">
+                <CustomSelect
+                  v-model="manualForm.produk"
+                  :options="fixedProducts"
+                  searchable
+                />
+                <input type="number" v-model="manualForm.nilai" placeholder="Nilai Saldo / Target RKA" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+              </div>
+
+              <!-- Form Pipeline -->
+              <div v-if="inputType === 'pipeline'" class="space-y-3">
+                <input v-model="manualForm.pipelineRMFT" placeholder="Nama RMFT" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input v-model="manualForm.pipelineNasabah" placeholder="Nama Calon Nasabah" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input type="number" v-model="manualForm.pipelineNominal" placeholder="Nominal Potensi Pipeline (Rp)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <CustomSelect
+                  v-model="manualForm.pipelineJenis"
+                  :options="['Giro', 'Tabungan', 'Deposito']"
+                />
+                <input type="number" v-model="manualForm.pipelineReal" placeholder="Realisasi Nominal (Rp)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input type="date" v-model="manualForm.pipelineDate" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+              </div>
+
+              <!-- Form Achievement RMFT -->
+              <div v-if="inputType === 'rmft_ach'" class="space-y-3">
+                <input v-model="manualForm.achRMFT" placeholder="Nama RMFT" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input type="number" v-model="manualForm.achAvgTab" placeholder="AVG Tabungan (%)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input type="number" v-model="manualForm.achPosTab" placeholder="Posisi Tabungan (%)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input type="number" v-model="manualForm.achAvgGiro" placeholder="AVG Giro (%)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input type="number" v-model="manualForm.achAvgDpk" placeholder="AVG DPK (%)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input type="number" v-model="manualForm.achTotal" placeholder="Total Achievement (%)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+              </div>
+
+              <!-- Form Nasabah Pareto -->
+              <div v-if="inputType === 'nasabah'" class="space-y-3">
+                <input v-model="manualForm.nasabahNama" placeholder="Nama Nasabah (wajib)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input v-model="manualForm.nasabahUsaha" placeholder="Jenis Usaha (misal: Koran)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input type="number" v-model="manualForm.nasabahOmset" placeholder="Omset Usaha (Rp)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <CustomSelect
+                  v-model="manualForm.nasabahProduk"
+                  :options="['TAB', 'GIRO', 'DEP']"
+                />
+                <input type="number" v-model="manualForm.nasabahVolume" placeholder="Volume Tabungan (misal: 65000)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+                <input type="number" v-model="manualForm.nasabahPersen" placeholder="Presentase (%, Kosongkan = Volume / 1000)" class="w-full border border-slate-200 p-3 rounded-xl text-xs bg-slate-50 focus:bg-white outline-none" />
+              </div>
+
+              <button
+                type="button"
+                @click="addManualRow"
+                class="w-full py-3 bg-blue-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow-md shadow-blue-200 flex justify-center items-center gap-1.5"
+              >
+                <FilePlus2 class="w-4 h-4" /> Tambah ke Daftar Preview
+              </button>
             </div>
           </div>
         </div>

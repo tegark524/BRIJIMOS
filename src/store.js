@@ -3,7 +3,7 @@ import { reactive } from 'vue';
 const apiUrl = import.meta.env.VITE_API_URL;
 
 export const store = reactive({
-  rawData: { pegawai: [], unit: [], keragaan: [], rka: [], pipeline: [], rmft_ach: [] },
+  rawData: { pegawai: [], unit: [], keragaan: [], rka: [], pipeline: [], rmft_ach: [], nasabah: [] },
   isLoading: false,
   isLoaded: false,
   lastUpdated: null,
@@ -81,7 +81,8 @@ export const fetchData = async (forceRefresh = false) => {
         keragaan: data.keragaan || [],
         rka: data.rka || [],
         pipeline: data.pipeline || [],
-        rmft_ach: data.rmft_ach || []
+        rmft_ach: data.rmft_ach || [],
+        nasabah: data.nasabah || []
       };
       store.isLoaded = true;
       store.lastUpdated = now;
