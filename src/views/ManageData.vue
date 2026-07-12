@@ -70,7 +70,7 @@ watch(() => route.query.type, (newType) => {
     targetType.value = newType;
     selectedDateToDelete.value = '';
   }
-});
+}, { immediate: true });
 
 watch(targetType, (newVal) => {
   if (route.query.type !== newVal) {
@@ -196,7 +196,7 @@ onMounted(fetchData);
 </script>
 
 <template>
-  <div class="p-4 md:p-8 max-w-4xl mx-auto animate-in fade-in duration-500 font-sans" style="font-family: 'Inter', sans-serif;">
+  <div class="p-4 md:p-8 pb-64 max-w-4xl mx-auto animate-in fade-in duration-500 font-sans" style="font-family: 'Inter', sans-serif;">
     
     <!-- Toast Notification Overlay -->
     <transition name="slide-down">

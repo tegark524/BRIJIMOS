@@ -678,7 +678,7 @@ const saveData = async () => {
 </script>
 
 <template>
-  <div class="p-6 md:p-10 max-w-7xl mx-auto animate-in fade-in duration-500">
+  <div class="p-6 md:p-10 pb-64 max-w-7xl mx-auto animate-in fade-in duration-500">
     
     <div class="flex items-center space-x-5 mb-10">
       <div class="p-5 bg-blue-600 rounded-[2.5rem] shadow-2xl text-white rotate-3">
