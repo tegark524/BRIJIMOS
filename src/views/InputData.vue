@@ -409,7 +409,7 @@ const handlePaste = () => {
   setTimeout(() => {
     const rows = rawPaste.value.split('\n');
 
-    // Preprocess split lines for nasabah
+    // Preprocess split lines for nasabah — merge continuation lines
     if (inputType.value === 'nasabah') {
       const cleanedRows = [];
       let pendingLine = '';
@@ -423,24 +423,21 @@ const handlePaste = () => {
           cols = trimmed.split(/\s{2,}/);
         }
         
-        // Check if this line is a continuation of the previous line
-        const isFirstColNumber = !isNaN(cleanNum(cols[0])) || cols[0].includes('%');
-        const isContinuation = pendingLine && (isFirstColNumber || cols.length < 4);
+        // A continuation line starts with a number or %, and has few columns
+        const firstVal = cols[0]?.trim() || '';
+        const isFirstColNumeric = /^[\d.,]+%?$/.test(firstVal);
+        const isContinuation = pendingLine && (isFirstColNumeric || cols.length < 3);
         
         if (isContinuation) {
-          pendingLine += '\t' + trimmed;
+          // Join with triple-space so the \s{2,} splitter treats it uniformly
+          pendingLine += '   ' + trimmed;
         } else {
-          if (pendingLine) {
-            cleanedRows.push(pendingLine);
-          }
+          if (pendingLine) cleanedRows.push(pendingLine);
           pendingLine = trimmed;
         }
       });
       
-      if (pendingLine) {
-        cleanedRows.push(pendingLine);
-      }
-      
+      if (pendingLine) cleanedRows.push(pendingLine);
       rows.splice(0, rows.length, ...cleanedRows);
     }
 
@@ -523,7 +520,7 @@ const handlePaste = () => {
     rows.forEach(row => {
       const text = row.trim();
       const upText = text.toUpperCase();
-      if (text === '' || upText.includes('RMFT') || upText.includes('NASABAH') || upText.includes('KETERANGAN') || upText.includes('POSISI TAB') || upText.includes('AVG TAB')) return;
+      if (text === '' || upText.includes('RMFT') || (upText.includes('NASABAH') && inputType.value !== 'nasabah') || upText.includes('KETERANGAN') || upText.includes('POSISI TAB') || upText.includes('AVG TAB')) return;
       let cols = text.split('\t'); 
       if (cols.length === 1) {
         cols = text.split(/\s{2,}/);
@@ -668,14 +665,41 @@ const handlePaste = () => {
         }
 
       } else if (inputType.value === 'nasabah') {
-        if (cols.length >= 2) {
+        if (cols.length >= 3) {
+          // Smart-detect: find the product keyword (TAB/GIRO/DEPO) as anchor
+          let prodIdx = -1;
+          for (let i = 1; i < cols.length; i++) {
+            const up = cols[i].trim().toUpperCase();
+            if (['TAB', 'GIRO', 'DEPO', 'DEPOSITO', 'TABUNGAN'].includes(up)) {
+              prodIdx = i;
+              break;
+            }
+          }
+          // Fallback: if no product keyword found, assume it's at index 3 (6-col format)
+          if (prodIdx === -1) prodIdx = Math.min(3, cols.length - 1);
+
+          // Omset is the column right before the product
+          const omsetIdx = prodIdx - 1;
+
+          // Everything before omset is Name + optional Usaha
+          let nama = '', usaha = '';
+          if (omsetIdx >= 2) {
+            // Multiple cols before omset → first cols are name, last before omset is usaha
+            nama = cols.slice(0, omsetIdx - 1).join(' ').trim() || cols[0]?.trim() || '';
+            usaha = cols[omsetIdx - 1]?.trim() || '';
+          } else if (omsetIdx === 1) {
+            nama = cols[0]?.trim() || '';
+          } else {
+            nama = cols[0]?.trim() || '';
+          }
+
           result.push({
-            Nama_Nasabah: cols[0]?.trim() || '',
-            Jenis_Usaha: cols[1]?.trim() || '',
-            Omset: cleanNum(cols[2]),
-            Produk_BRI: (cols[3]?.trim() || 'TAB').toUpperCase(),
-            Volume: cleanNum(cols[4]),
-            Presentase: cols[5] ? cleanNum(cols[5]) : 0
+            Nama_Nasabah: nama,
+            Jenis_Usaha: usaha,
+            Omset: cleanNum(cols[omsetIdx]),
+            Produk_BRI: (cols[prodIdx]?.trim() || 'TAB').toUpperCase(),
+            Volume: cleanNum(cols[prodIdx + 1]),
+            Presentase: cols[prodIdx + 2] ? cleanNum(cols[prodIdx + 2]) : 0
           });
         }
       }
