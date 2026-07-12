@@ -541,10 +541,9 @@ const handlePaste = () => {
         .replace(/(\bTAB|\bGIRO|\bDEPO|\bDEPOSITO|\bTABUNGAN)\s+(\d+)/gi, '$1   $2')
         .replace(/(\d+)\s+(\bTAB|\bGIRO|\bDEPO|\bDEPOSITO|\bTABUNGAN)/gi, '$1   $2');
 
-      let cols = cleanedText.split('\t'); 
-      if (cols.length === 1) {
-        cols = cleanedText.split(/\s{2,}/);
-      }
+      // Normalize all tabs to triple-spaces to support mixed spacing and tabs uniformly
+      let normalizedText = cleanedText.replace(/\t/g, '   ');
+      let cols = normalizedText.split(/\s{2,}/).map(c => c.trim()).filter(Boolean);
       
       if (inputType.value === 'pegawai') {
         let pn = '', nama = '', g, t, d;
