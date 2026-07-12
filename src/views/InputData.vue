@@ -190,9 +190,9 @@ Andi Wijaya	UD Makmur	50.000.000	11/06/2026	Deposito	50.000.000`,
   nasabah: {
     title: 'Nasabah Pareto',
     columns: ['Nama Nasabah', 'Jenis Usaha', 'Omset', 'Produk BRI', 'Volume', 'Presentase'],
-    raw: `Jawa Pos	Koran	100000000000	TAB	65000	65%
-Lunic	Sawit	100000000000	TAB	43000	43%
-Ladang	E Commerce	100000000000	TAB	50000	50%`,
+    raw: `Jawa Pos	Koran	100000	TAB	65000	65%
+Lunic	Sawit	100000	TAB	43000	43%
+Ladang	E Commerce	100000	TAB	50000	50%`,
     desc: 'Paste data nasabah prioritas. Kolom: Nama Nasabah | Jenis Usaha | Omset (angka) | Produk BRI | Volume (angka) | Presentase (%, angka/persen). Data ini bersifat STATIS (tidak ada kolom tanggal).'
   }
 };
