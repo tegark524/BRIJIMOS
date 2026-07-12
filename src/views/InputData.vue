@@ -408,6 +408,42 @@ const activeVersion = ref('new');
 const handlePaste = () => {
   setTimeout(() => {
     const rows = rawPaste.value.split('\n');
+
+    // Preprocess split lines for nasabah
+    if (inputType.value === 'nasabah') {
+      const cleanedRows = [];
+      let pendingLine = '';
+      
+      rows.forEach(r => {
+        const trimmed = r.trim();
+        if (!trimmed) return;
+        
+        let cols = trimmed.split('\t');
+        if (cols.length === 1) {
+          cols = trimmed.split(/\s{2,}/);
+        }
+        
+        // Check if this line is a continuation of the previous line
+        const isFirstColNumber = !isNaN(cleanNum(cols[0])) || cols[0].includes('%');
+        const isContinuation = pendingLine && (isFirstColNumber || cols.length < 4);
+        
+        if (isContinuation) {
+          pendingLine += '\t' + trimmed;
+        } else {
+          if (pendingLine) {
+            cleanedRows.push(pendingLine);
+          }
+          pendingLine = trimmed;
+        }
+      });
+      
+      if (pendingLine) {
+        cleanedRows.push(pendingLine);
+      }
+      
+      rows.splice(0, rows.length, ...cleanedRows);
+    }
+
     const result = [];
     let lastRMFT = ''; // Untuk menyimpan nama RMFT jika baris bawahnya kosong
     let lastFormatIndex = -1; // Menyimpan letak kolom tanggal dari baris sebelumnya
