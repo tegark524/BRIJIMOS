@@ -112,11 +112,26 @@ const addManualRow = () => {
       : defaultPct;
     row = {
       Nama_Nasabah: manualForm.value.nasabahNama,
+      "Nama Nasabah": manualForm.value.nasabahNama,
+      "Nama nasabah": manualForm.value.nasabahNama,
+      
       Jenis_Usaha: manualForm.value.nasabahUsaha || '',
+      "Jenis Usaha": manualForm.value.nasabahUsaha || '',
+      "Jenis usaha": manualForm.value.nasabahUsaha || '',
+      
       Omset: Number(manualForm.value.nasabahOmset) || 0,
+      omset: Number(manualForm.value.nasabahOmset) || 0,
+      
       Produk_BRI: manualForm.value.nasabahProduk.toUpperCase(),
+      "Produk BRI": manualForm.value.nasabahProduk.toUpperCase(),
+      "produk bri": manualForm.value.nasabahProduk.toUpperCase(),
+      produk_bri: manualForm.value.nasabahProduk.toUpperCase(),
+      
       Volume: vol,
-      Presentase: pct
+      volume: vol,
+      
+      Presentase: pct,
+      presentase: pct
     };
   }
 
@@ -521,9 +536,14 @@ const handlePaste = () => {
       const text = row.trim();
       const upText = text.toUpperCase();
       if (text === '' || upText.includes('RMFT') || (upText.includes('NASABAH') && inputType.value !== 'nasabah') || upText.includes('KETERANGAN') || upText.includes('POSISI TAB') || upText.includes('AVG TAB')) return;
-      let cols = text.split('\t'); 
+      // Clean up single-spaced product keywords or numbers so they split cleanly
+      let cleanedText = text
+        .replace(/(\bTAB|\bGIRO|\bDEPO|\bDEPOSITO|\bTABUNGAN)\s+(\d+)/gi, '$1   $2')
+        .replace(/(\d+)\s+(\bTAB|\bGIRO|\bDEPO|\bDEPOSITO|\bTABUNGAN)/gi, '$1   $2');
+
+      let cols = cleanedText.split('\t'); 
       if (cols.length === 1) {
-        cols = text.split(/\s{2,}/);
+        cols = cleanedText.split(/\s{2,}/);
       }
       
       if (inputType.value === 'pegawai') {
@@ -695,11 +715,26 @@ const handlePaste = () => {
 
           result.push({
             Nama_Nasabah: nama,
+            "Nama Nasabah": nama,
+            "Nama nasabah": nama,
+            
             Jenis_Usaha: usaha,
+            "Jenis Usaha": usaha,
+            "Jenis usaha": usaha,
+            
             Omset: cleanNum(cols[omsetIdx]),
+            omset: cleanNum(cols[omsetIdx]),
+            
             Produk_BRI: (cols[prodIdx]?.trim() || 'TAB').toUpperCase(),
+            "Produk BRI": (cols[prodIdx]?.trim() || 'TAB').toUpperCase(),
+            "produk bri": (cols[prodIdx]?.trim() || 'TAB').toUpperCase(),
+            produk_bri: (cols[prodIdx]?.trim() || 'TAB').toUpperCase(),
+            
             Volume: cleanNum(cols[prodIdx + 1]),
-            Presentase: cols[prodIdx + 2] ? cleanNum(cols[prodIdx + 2]) : 0
+            volume: cleanNum(cols[prodIdx + 1]),
+            
+            Presentase: cols[prodIdx + 2] ? cleanNum(cols[prodIdx + 2]) : 0,
+            presentase: cols[prodIdx + 2] ? cleanNum(cols[prodIdx + 2]) : 0
           });
         }
       }
