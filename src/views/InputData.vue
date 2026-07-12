@@ -993,6 +993,13 @@ const saveData = async () => {
                   <th class="p-4 border-b border-slate-700 text-right whitespace-nowrap">SGF</th>
                   <th class="p-4 border-b border-slate-700 text-right rounded-tr-2xl whitespace-nowrap">TOTAL</th>
                 </tr>
+                <tr v-else-if="inputType === 'nasabah'">
+                  <th class="p-5 rounded-tl-2xl border-b border-slate-700 text-left">Nama Nasabah & Usaha</th>
+                  <th class="p-5 border-b border-slate-700 text-right">Omset</th>
+                  <th class="p-5 border-b border-slate-700 text-center">Produk</th>
+                  <th class="p-5 border-b border-slate-700 text-right">Volume</th>
+                  <th class="p-5 border-b border-slate-700 text-right rounded-tr-2xl">Presentase</th>
+                </tr>
                 <tr v-else>
                   <th class="p-5 rounded-tl-2xl border-b border-slate-700">Data Utama</th>
                   <th v-if="inputType === 'pegawai'" v-for="h in ['Giro','Tab','Depo']" :key="h" class="p-5 text-right border-b border-slate-700">{{ h }}</th>
@@ -1041,6 +1048,26 @@ const saveData = async () => {
                     <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.PROG_KANWIL }}%</td>
                     <td class="p-4 text-right font-mono text-slate-500 border-b border-slate-100">{{ d.PROG_SGF }}%</td>
                     <td class="p-4 text-right font-black text-green-700 border-b border-slate-100">{{ d.TOTAL }}%</td>
+                  </template>
+                  <template v-else-if="inputType === 'nasabah'">
+                    <td class="p-5 border-b border-slate-100">
+                      <div class="font-black text-blue-900 uppercase text-[11px]">{{ d.Nama_Nasabah || '-' }}</div>
+                      <div class="font-bold text-slate-400 text-[9px] mt-1">{{ d.Jenis_Usaha || '-' }}</div>
+                    </td>
+                    <td class="p-5 text-right font-mono text-slate-700 border-b border-slate-100">
+                      {{ (d.Omset || 0).toLocaleString('id-ID') }}
+                    </td>
+                    <td class="p-5 text-center border-b border-slate-100">
+                      <span class="px-2.5 py-1 bg-blue-50 border border-blue-100 rounded-lg font-black text-[10px] text-blue-600">
+                        {{ d.Produk_BRI }}
+                      </span>
+                    </td>
+                    <td class="p-5 text-right font-mono text-slate-700 border-b border-slate-100">
+                      {{ (d.Volume || 0).toLocaleString('id-ID') }}
+                    </td>
+                    <td class="p-5 text-right font-mono text-slate-700 border-b border-slate-100">
+                      {{ (d.Presentase || 0).toFixed(1) }}%
+                    </td>
                   </template>
                   <template v-else>
                     <td class="p-5 font-black text-slate-700 border-b border-slate-100 uppercase">{{ d.pn || d.unit || d.produk }} <span class="block font-medium text-slate-400 text-[10px] mt-1">{{ d.nama || '' }}</span></td>
